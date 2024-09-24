@@ -102,7 +102,11 @@ class CategoryDAL:
             db.session.rollback()
             raise e
         return category
-
+    
+    @staticmethod 
+    def get_all_categories() -> list[Category]:
+        categories = db.session.query(Category).all()
+        return categories
 # endregion
 
 # region CRUD operations for Reviews
@@ -161,7 +165,7 @@ class ProductDAL:
 
     @staticmethod
     def get_product_by_id(product_id:int) -> Order:
-        product = Product.query.get(product_id)
+        product = db.session.get(Product, product_id)
         return product
 
     @staticmethod
