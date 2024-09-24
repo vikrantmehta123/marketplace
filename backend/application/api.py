@@ -308,8 +308,6 @@ def get_order_by_buyer():
 
 @api.route('/orders/<int:order_id>', methods=['DELETE'])
 def delete_order(order_id):
-    deleted_order = OrderDAL.delete(order_id=order_id)
-    return jsonify(deleted_order.to_json()), 204
     try:
         deleted_order = OrderDAL.delete(order_id=order_id)
         return jsonify(deleted_order.to_json()), 204  # No Content
