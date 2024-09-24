@@ -111,7 +111,8 @@ def delete_category(category_id):
 
 @api.route('/products', methods=['GET'])
 def get_products_by_category():
-    category_id = request.args.get('category_id')
+    data = request.json
+    category_id = data.get('category_id')
     
     if not category_id:
         return jsonify({"error": "category_id is required"}), 400 
@@ -125,14 +126,14 @@ def get_products_by_category():
     except Exception as e:
         return jsonify({"error": str(e)}), 500  # Internal Server Error
 
-@api.route('/api/products/<int:product_id>', methods=['GET'])
+@api.route('/products/<int:product_id>', methods=['GET'])
 def get_product(product_id):
     product = ProductDAL.get_product_by_id(product_id)
     if product:
         return jsonify(product.to_json())
     return jsonify({'message': 'Product not found'}), 404  # Return a 404 if not found
 
-@api.route('/api/products', methods=['POST'])
+@api.route('/products', methods=['POST'])
 def create_product():
     data = request.json
     product_name = data.get('product_name')
@@ -143,7 +144,7 @@ def create_product():
     product = ProductDAL.create(product_name, description, category_id, created_by)
     return jsonify(product.to_json()), 201  # Return the created product with a 201 status code
 
-@api.route('/api/products/<int:product_id>', methods=['PUT'])
+@api.route('/products/<int:product_id>', methods=['PUT'])
 def update_product(product_id):
     data = request.json
     product = ProductDAL.get_product_by_id(product_id)

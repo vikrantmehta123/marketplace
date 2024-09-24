@@ -82,8 +82,8 @@ class Category(db.Model):
         return dataclasses.asdict(self)
 
 @dataclass
-class Product(TimestampMixin, db.Model):
-    product_id:int
+class Product( db.Model, TimestampMixin):
+    product_id:int = field(init=False, default=None)
     product_name:str
     description:str
     category_id:int
@@ -103,7 +103,7 @@ class Product(TimestampMixin, db.Model):
         return dataclasses.asdict(self)
 
 @dataclass
-class ProductSellers(TimestampMixin, db.Model):
+class ProductSellers(db.Model, TimestampMixin):
     productseller_id:int
     product_id:int
     seller_id:int
@@ -123,7 +123,7 @@ class ProductSellers(TimestampMixin, db.Model):
         return dataclasses.asdict(self)
     
 @dataclass
-class Review(TimestampMixin, db.Model):
+class Review(db.Model, TimestampMixin):
     review_id: int
     user_id: int
     product_id:int
@@ -143,7 +143,7 @@ class Review(TimestampMixin, db.Model):
         return dataclasses.asdict(self)
 
 @dataclass
-class Order(TimestampMixin, db.Model):
+class Order(db.Model, TimestampMixin):
     order_id:int
     buyer_id:int
     orderitems: list['OrderItems'] = field(default_factory=list)
