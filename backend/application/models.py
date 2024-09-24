@@ -152,6 +152,7 @@ class Order(db.Model, TimestampMixin):
     buyer_id = Column(Integer, ForeignKey('user.user_id'), nullable=False)
 
     user = relationship('User', backref='purchase_orders')
+    orderitems = relationship('OrderItems', backref='order', cascade='all, delete')
 
     def to_json(self) -> dict:
         return dataclasses.asdict(self)
@@ -167,7 +168,7 @@ class OrderItems(db.Model):
     is_completed:bool
 
     orderitems_id = Column(Integer, primary_key=True, autoincrement=True)
-    order_id = Column(Integer, ForeignKey('order.order_id', ondelete='CASCADE'), nullable=False)
+    order_id = Column(Integer, ForeignKey('order.order_id'), nullable=False)
     seller_id = Column(Integer, ForeignKey('user.user_id'), nullable=False)
     product_id = Column(Integer, ForeignKey('product.product_id'), nullable=False)
     price = Column(Float, nullable=False)
@@ -175,7 +176,6 @@ class OrderItems(db.Model):
     is_completed = Column(Boolean, default=False)
 
     seller = relationship('User', backref='sales_orders')
-    order = relationship('Order', backref='orderitems')
     product = relationship('Product', backref='orders')
 
     def to_json(self) -> dict:

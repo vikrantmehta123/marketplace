@@ -271,6 +271,7 @@ class ProductSellerDAL:
         if not productseller:
             raise ValueError("Productseller not found")
         return productseller
+    
 class OrderDAL:
     @staticmethod
     def create(buyer_id:int, items:list[dict]) -> Order:
@@ -295,8 +296,12 @@ class OrderDAL:
 
     @staticmethod
     def get_order_by_id(order_id:int) -> Order:
-        order = Order.query.get(order_id)
+        order = db.session.get(Order, order_id)
         return order
+    
+    @staticmethod
+    def get_order_by_buyer(buyer_id:int) -> list[Order]:
+        return db.session.query(Order).filter_by(buyer_id=buyer_id).all()
 
     @staticmethod
     def update(order_id:int,  items: list[dict] = None) -> Order:
@@ -309,8 +314,8 @@ class OrderDAL:
     @staticmethod
     def delete(order_id:int) -> Order:
         order = OrderDAL.get_order_by_id(order_id=order_id)
-        if not order:
-            raise ValueError("Order doesn't exist")
+        # if order is None:
+        #     raise ValueError("Order doesn't exist")
         
         for item in order.orderitems:
             if item.is_completed:
@@ -319,7 +324,7 @@ class OrderDAL:
         try:
             db.session.delete(order) 
             db.session.commit()
-        except:
+        except Exception as e:
             db.session.rollback()
-            raise ValueError("Order doesn't exist")
+            raise e
         return order

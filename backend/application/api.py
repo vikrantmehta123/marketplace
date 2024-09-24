@@ -278,3 +278,43 @@ def get_sellers_by_product(product_id):
     except Exception as e:
         return jsonify({'error': str(e)}), 400  # Bad request
 # endregion
+
+# region Order API
+@api.route('/orders', methods=['POST'])
+def create_order():
+    data = request.json
+    buyer_id = data.get('buyer_id')
+    items = data.get('items')
+
+    try:
+        order = OrderDAL.create(buyer_id=buyer_id, items=items)
+        return jsonify(order.to_json()), 201  # Created
+    except Exception as e:
+        return jsonify({'error': str(e)}), 400  # Bad request
+
+@api.route('/orders/<int:order_id>', methods=['GET'])
+def get_order(order_id):
+    order = OrderDAL.get_order_by_id(order_id)
+    if order:
+        return jsonify(order.to_json()), 200  # OK
+    return jsonify({'message': 'Order not found'}), 404  # Not found
+
+@api.route('/orders', methods=['GET'])
+def get_order_by_buyer():
+    data = request.json
+    buyer_id = data.get('buyer_id')
+    orderlist = OrderDAL.get_order_by_buyer(buyer_id=buyer_id)
+    return jsonify(orderlist), 200
+
+@api.route('/orders/<int:order_id>', methods=['DELETE'])
+def delete_order(order_id):
+    deleted_order = OrderDAL.delete(order_id=order_id)
+    return jsonify(deleted_order.to_json()), 204
+    try:
+        deleted_order = OrderDAL.delete(order_id=order_id)
+        return jsonify(deleted_order.to_json()), 204  # No Content
+    except ValueError as e:
+        return jsonify({'message': str(e)}), 404  # Not found
+    except Exception as e:
+        return jsonify({'error': str(e)}), 400  # Bad request
+# endregion
