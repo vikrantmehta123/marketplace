@@ -21,7 +21,15 @@ class TimestampMixin:
 
 @dataclass
 class Role(db.Model):
-    role_id: int
+    """
+    { 
+        1: Admin, 
+        2: Seller, 
+        3: Buyer
+    }
+    """
+
+    role_id: int = field(init=False, default=None)
     role_name:str
 
     role_id = Column(Integer, primary_key=True, autoincrement=True)
@@ -31,11 +39,10 @@ class Role(db.Model):
         return dataclasses.asdict(self)
 
 @dataclass
-class User(TimestampMixin, db.Model):
-    user_id: int
+class User(db.Model, TimestampMixin):
+    user_id: int = field(init=False, default=None)
     username: str
     email: str
-    password: str
     contact: str
     address: str
     roles: list['Role'] = field(default_factory=list)
@@ -57,6 +64,8 @@ class UserRole(db.Model):
     role_id = Column(Integer, ForeignKey('role.role_id'))
 
     user = relationship('User', backref='roles')
+    role = relationship('Role', backref='users') 
+
 
     def to_json(self) -> dict:
         return dataclasses.asdict(self)

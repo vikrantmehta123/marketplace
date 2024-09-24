@@ -3,6 +3,50 @@ from .dal import *
 
 api = Blueprint('api', __name__, url_prefix='/api/v1')
 
+# region User API
+
+@api.route('/users', methods=['POST'])
+def create_user():
+    data = request.json
+    
+    user = UserDAL.create(
+        username=data['username'],
+        email=data['email'],
+        password=data['password'],
+        contact=data['contact'],
+        address=data['address'],
+        roles=data.get('roles', []) 
+    )
+    return jsonify(user.to_json()), 201
+
+
+@api.route('/users/<int:user_id>', methods=['GET'])
+def get_user_by_id(user_id):
+    user = UserDAL.get_user_by_id(user_id)
+    if user:
+        return jsonify(user.to_json()), 200
+    return jsonify({'error': 'User not found'}), 404
+
+@api.route('/users/<username>', methods=['GET'])
+def get_user_by_username(username):
+    user = UserDAL.get_user_by_username(username=username)
+    if user:
+        return jsonify(user.to_json()), 200
+    return jsonify({'error': 'User not found'}), 404
+
+
+@api.route('/users/<int:user_id>', methods=['PUT'])
+def update_user(user_id):
+    data = request.json
+    try:
+        user = UserDAL.update(user_id, **data)
+        return jsonify(user.to_json()), 200
+    except ValueError as e:
+        return jsonify({'error': str(e)}), 404
+    except AttributeError as e:
+        return jsonify({'error': str(e)}), 400
+# endregion
+
 # region API for Category
 @api.route('/category', methods=['POST'])
 def create_category():

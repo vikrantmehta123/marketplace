@@ -1,6 +1,6 @@
 from sqlalchemy.exc import IntegrityError
 from .models import *
-from bcrypt import hashpw
+import bcrypt
 from .exceptions import *
 
 SALT ="some-string"
@@ -8,16 +8,26 @@ SALT ="some-string"
 # region CRUD operations for User
 class UserDAL:
     @staticmethod
-    def create(username:str, email:str, password:str, contact:str, address:str) -> User:
-        # TODO: Check how to insert roles
-        pw = hashpw(password=password, salt=SALT)
+    def create(username:str, email:str, password:str, contact:str, address:str, roles:list[int]) -> User:
+        if len(roles) == 0: 
+            raise ValueError("Roles cannot be empty")
+        for role in roles:
+            if role not in [1, 2, 3]:
+                raise ValueError("Roles cannot take invalid value")
+            
+        pw = bcrypt.hashpw(password=password.encode('utf-8'), salt=bcrypt.gensalt())
         user = User(username=username, email=email, password=pw, contact=contact, address=address)
+
         try:
             db.session.add(user)
-            db.session.commit()
-        except IntegrityError:
+            for role in roles:
+                user_role = UserRole(user_id=user.user_id, role_id=role)
+                db.session.add(user_role)
+                user.roles.append(user_role)
+            db.session.commit()      
+        except IntegrityError as ie:
             db.session.rollback()
-            raise IntegrityError
+            raise ie  
         except Exception as e:
             db.session.rollback()
             raise e
@@ -25,12 +35,12 @@ class UserDAL:
 
     @staticmethod
     def get_user_by_id(user_id:int) -> User:
-        user = User.query.get(user_id)
+        user = db.session.get(User, user_id)
         return user
     
     @staticmethod
     def get_user_by_username(username:str) -> User:
-        user = User.query.filter_by(username= username).first()
+        user = db.session.query(User).filter_by(username=username).first()
         return user
 
     @staticmethod
