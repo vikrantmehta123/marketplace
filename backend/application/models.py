@@ -1,6 +1,7 @@
 from sqlalchemy import Column, Integer, String, Float, Boolean, ForeignKey, TIMESTAMP, Text
 from sqlalchemy.orm import relationship
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+import dataclasses
 import datetime
 from flask_sqlalchemy import *
 from sqlalchemy.orm import DeclarativeBase
@@ -10,18 +11,34 @@ class Base(DeclarativeBase):
 
 db = SQLAlchemy(model_class=Base)
 
+@dataclass
 class TimestampMixin:
-    created_at = Column(TIMESTAMP, default=datetime.utcnow, nullable=False)
-    updated_at = Column(TIMESTAMP, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False,)
+    created_at:datetime.datetime
+    updated_at:datetime.datetime
+
+    created_at = Column(TIMESTAMP, default=datetime.datetime.now(), nullable=False)
+    updated_at = Column(TIMESTAMP, default=datetime.datetime.now(), onupdate=datetime.datetime.now(), nullable=False,)
+
+@dataclass
+class Role(db.Model):
+    role_id: int
+    role_name:str
+
+    role_id = Column(Integer, primary_key=True, autoincrement=True)
+    role_name = Column(String(120), unique=True, nullable=False)
+
+    def to_json(self) -> dict:
+        return dataclasses.asdict(self)
 
 @dataclass
 class User(TimestampMixin, db.Model):
     user_id: int
-    email: str
     username: str
+    email: str
     password: str
     contact: str
     address: str
+    roles: list['Role'] = field(default_factory=list)
 
     user_id = Column(Integer, primary_key=True, autoincrement=True)
     username = Column(String(125), unique=True, nullable=False, index=True)
@@ -30,12 +47,8 @@ class User(TimestampMixin, db.Model):
     contact = Column(String(10), nullable=False)
     address = Column(String(255), nullable=False)
 
-class Role(db.Model):
-    role_id: int
-    role_name:str
-
-    role_id = Column(Integer, primary_key=True, autoincrement=True)
-    role_name = Column(String(120), unique=True, nullable=False)
+    def to_json(self) -> dict:
+        return dataclasses.asdict(self)
 
 @dataclass
 class UserRole(db.Model):
@@ -45,27 +58,40 @@ class UserRole(db.Model):
 
     user = relationship('User', backref='roles')
 
+    def to_json(self) -> dict:
+        return dataclasses.asdict(self)
 @dataclass
 class Category(db.Model):
     category_id : int
     category_name: str
+    products:list['Product'] = field(default_factory=list)
 
     category_id = Column(Integer, primary_key=True, autoincrement=True)
     category_name = Column(String(120), unique=True, nullable=False)
+
+    def to_json(self) -> dict:
+        return dataclasses.asdict(self)
 
 @dataclass
 class Product(TimestampMixin, db.Model):
     product_id:int
     product_name:str
     description:str
+    category_id:int
+    reviews:list['Review'] = field(default_factory=list)
+    sellers:list['User'] = field(default_factory=list)
+    orders:list['OrderItems'] = field(default_factory=list)
 
     product_id = Column(Integer, primary_key=True, autoincrement=True)
     product_name = Column(String(255), nullable=False)
     description = Column(Text, nullable=False)
     created_by = Column(Integer, ForeignKey('user.user_id'))
-    category_id = Column(Integer, ForeignKey('category.category_id'))
+    category_id = Column(Integer, ForeignKey('category.category_id', ondelete='CASCADE'))
 
     category = relationship('Category', backref='products')
+
+    def to_json(self) -> dict:
+        return dataclasses.asdict(self)
 
 @dataclass
 class ProductSellers(TimestampMixin, db.Model):
@@ -75,6 +101,7 @@ class ProductSellers(TimestampMixin, db.Model):
     selling_price:float
     stock:int
 
+    productseller_id = Column(Integer, primary_key=True, autoincrement=True)
     product_id = Column(Integer, ForeignKey('product.product_id'))
     seller_id = Column(Integer, ForeignKey('user.user_id'))
     selling_price = Column(Float, nullable=False)
@@ -82,7 +109,10 @@ class ProductSellers(TimestampMixin, db.Model):
 
     seller = relationship('User', backref="products")
     product = relationship('Product', backref='sellers')
-
+    
+    def to_json(self) -> dict:
+        return dataclasses.asdict(self)
+    
 @dataclass
 class Review(TimestampMixin, db.Model):
     review_id: int
@@ -100,18 +130,26 @@ class Review(TimestampMixin, db.Model):
     user = relationship('User', backref='reviews')
     product = relationship('Product', backref='reviews')
 
+    def to_json(self) -> dict:
+        return dataclasses.asdict(self)
+
 @dataclass
 class Order(TimestampMixin, db.Model):
     order_id:int
     buyer_id:int
+    orderitems: list['OrderItems'] = field(default_factory=list)
 
     order_id = Column(Integer, primary_key=True, autoincrement=True)
     buyer_id = Column(Integer, ForeignKey('user.user_id'), nullable=False)
 
     user = relationship('User', backref='purchase_orders')
 
+    def to_json(self) -> dict:
+        return dataclasses.asdict(self)
+
 @dataclass
 class OrderItems(db.Model):
+    orderitems_id:int
     order_id:int
     seller_id:int
     product_id:int
@@ -119,7 +157,8 @@ class OrderItems(db.Model):
     quantity:int
     is_completed:bool
 
-    order_id = Column(Integer, ForeignKey('Order.order_id'), nullable=False)
+    orderitems_id = Column(Integer, primary_key=True, autoincrement=True)
+    order_id = Column(Integer, ForeignKey('order.order_id', ondelete='CASCADE'), nullable=False)
     seller_id = Column(Integer, ForeignKey('user.user_id'), nullable=False)
     product_id = Column(Integer, ForeignKey('product.product_id'), nullable=False)
     price = Column(Float, nullable=False)
@@ -127,5 +166,8 @@ class OrderItems(db.Model):
     is_completed = Column(Boolean, default=False)
 
     seller = relationship('User', backref='sales_orders')
-    order = relationship('Order', backref='orderdetails')
+    order = relationship('Order', backref='orderitems')
     product = relationship('Product', backref='orders')
+
+    def to_json(self) -> dict:
+        return dataclasses.asdict(self)

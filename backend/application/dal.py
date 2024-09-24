@@ -1,34 +1,70 @@
 from sqlalchemy.exc import IntegrityError
-from models import *
+from .models import *
+from bcrypt import hashpw
+from .exceptions import *
 
+SALT ="some-string"
+
+# region CRUD operations for User
 class UserDAL:
     @staticmethod
-    def create() -> User:
-        pass
+    def create(username:str, email:str, password:str, contact:str, address:str) -> User:
+        # TODO: Check how to insert roles
+        pw = hashpw(password=password, salt=SALT)
+        user = User(username=username, email=email, password=pw, contact=contact, address=address)
+        try:
+            db.session.add(user)
+            db.session.commit()
+        except IntegrityError:
+            db.session.rollback()
+            raise IntegrityError
+        except Exception as e:
+            db.session.rollback()
+            raise e
+        return user
 
     @staticmethod
-    def read_user_by_id(user_id:int) -> User:
+    def get_user_by_id(user_id:int) -> User:
         user = User.query.get(user_id)
         return user
     
     @staticmethod
-    def read_user_by_username(username:str) -> User:
+    def get_user_by_username(username:str) -> User:
         user = User.query.filter_by(username= username).first()
         return user
 
     @staticmethod
-    def update() -> User:
-        pass
-
+    def update(user_id:int, **kwargs) -> User:
+        user = UserDAL.get_user_by_id(user_id=user_id)
+        if not user: 
+            raise ValueError("User not found")
+        for key, value in kwargs.items():
+            if hasattr(user, key):
+                setattr(user, key, value)
+            else:
+                db.session.rollback()
+                raise AttributeError(f"User has no attribute '{key}'")
+        try:
+            db.session.commit()
+        except Exception as e:
+            db.session.rollback()
+            raise e
+        return user 
+    
     @staticmethod
-    def delete() -> User:
-        pass
+    def get_incomplete_sales_orders(user_id: int):
+        try:
+            incomplete_sales_orders = OrderItems.query.filter_by(seller_id=user_id, is_completed=False).all()
+            return incomplete_sales_orders
+        except Exception as e:
+            raise e
+# endregion
 
 # region CRUD operations for Categories
 class CategoryDAL:
     @staticmethod
     def create(name:str) -> Category:
-        category = Category(name=name)
+        category = Category(category_name=name)
         try:
             db.session.add(category)
             db.session.commit()
@@ -38,23 +74,27 @@ class CategoryDAL:
         return category
 
     @staticmethod
-    def read_category_by_id(category_id:int) -> Category:
-        category = Category.query.get(category_id)
+    def get_category_by_id(category_id:int) -> Category:
+        category = db.session.get(Category, category_id)
         return category
 
     @staticmethod
-    def update(category_id:int, category_name:str):
-        category = Category.query.get(category_id)
-        if category:
+    def update(category_id:int, category_name:str) -> Category:
+        category = CategoryDAL.get_category_by_id(category_id=category_id)
+        if not category: 
+            raise ValueError("Category not found")
+        try:
             category.category_name = category_name
             db.session.commit()
-            return category
-        else:
-            raise ValueError("Category not found")
+
+        except Exception as e:
+            db.session.rollback()
+            raise e
+        return category
         
     @staticmethod
     def delete(category_id:int) -> Category:
-        category = Category.query.get(category_id)
+        category = CategoryDAL.get_category_by_id(category_id=category_id)
         try:
             db.session.delete(category) # TODO: instead of deleting, create a flag for is_deleted
             db.session.commit()
@@ -77,34 +117,97 @@ class ReviewDAL:
             raise e
         return review
     
-    def update(review_id:int) -> Review:
-        pass
+    def get_review_by_id(review_id:int) -> Review:
+        review = Review.query.get(review_id)
+        return review
+
+    def update(review_id:int, **kwargs) -> Review:
+        review = ReviewDAL.get_review_by_id(review_id)
+        if not review: 
+            raise ValueError("Review not found")
+        for key, value in kwargs.items():
+            if hasattr(review, key):
+                setattr(review, key, value)
+            else:
+                db.session.rollback()
+                raise AttributeError(f"Review has no attribute '{key}'")
+        try:
+            db.session.commit()
+        except Exception as e:
+            db.session.rollback()
+            raise e
+        return review 
 
     def delete(review_id:int) -> Review:
-        pass
+        review = ReviewDAL.get_review_by_id(review_id)
+        try:
+            db.session.delete(review)
+            db.session.commit()
+        except Exception as e:
+            raise e
+        return review
 # endregion
 
 class ProductDAL:
     @staticmethod
-    def create() -> Product:
-        pass
+    def create(product_name:str, description:str, category_id:int, created_by:int) -> Product:
+        product = Product(product_name=product_name, description=description, category_id=category_id, created_by=created_by)
+        try:
+            db.session.add(product)
+            db.session.commit()
+        except Exception as e:
+            db.session.rollback()
+        return product
 
     @staticmethod
-    def get_product_by_id() -> Order:
-        pass
+    def get_product_by_id(product_id:int) -> Order:
+        product = Product.query.get(product_id)
+        return product
 
     @staticmethod
-    def update() -> Order:
-        pass
+    def update(product_id:int, **kwargs) -> Order:
+        product = ProductDAL.get_product_by_id(product_id=product_id)
+        if not product: 
+            raise ValueError("Product not found")
+        for key, value in kwargs.items():
+            if hasattr(product, key):
+                setattr(product, key, value)
+            else:
+                db.session.rollback()
+                raise AttributeError(f"Product has no attribute '{key}'")
+        try:
+            db.session.commit()
+        except Exception as e:
+            db.session.rollback()
+            raise e
+        return product 
     
     @staticmethod
-    def delete() -> Order:
-        pass
+    def get_products_by_category(category_id:int) -> list[Product]:
+        category = CategoryDAL.get_category_by_id(category_id=category_id)
+        return category.products
 
 class OrderDAL:
     @staticmethod
-    def create() -> Order:
-        pass
+    def create(buyer_id:int, items:list[dict]) -> Order:
+        order = Order(buyer_id=buyer_id)
+        db.session.add(order)
+        
+        try:
+            for item in items:
+                order_item = OrderItems(
+                    seller_id=item['seller_id'],
+                    product_id=item['product_id'],
+                    price=item['price'],
+                    quantity=item['quantity']
+                )
+                order.orderitems.append(order_item)
+            
+            db.session.commit()
+        except Exception as e:
+            db.session.rollback()
+            raise e 
+        return order
 
     @staticmethod
     def get_order_by_id(order_id:int) -> Order:
@@ -112,17 +215,27 @@ class OrderDAL:
         return order
 
     @staticmethod
-    def update() -> Order:
-        pass
+    def update(order_id:int,  items: list[dict] = None) -> Order:
+        order = OrderDAL.get_order_by_id(order_id=order_id)
+        if not order:
+            raise ValueError("Order not found")
+        # TODO: update logic for orderitems
+
 
     @staticmethod
     def delete(order_id:int) -> Order:
         order = OrderDAL.get_order_by_id(order_id=order_id)
-        if order:
-            db.session.delete(order) # TODO: Before deleting, you need to check if any of the orderdetails are dispatched
-            db.session.commit()
-            return order
-        else:
-            db.session.rollback()
+        if not order:
             raise ValueError("Order doesn't exist")
         
+        for item in order.orderitems:
+            if item.is_completed:
+                CancellationNotPossibleError("Order has already been dispatched")
+
+        try:
+            db.session.delete(order) 
+            db.session.commit()
+        except:
+            db.session.rollback()
+            raise ValueError("Order doesn't exist")
+        return order
