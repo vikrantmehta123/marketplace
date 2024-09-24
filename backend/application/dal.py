@@ -208,6 +208,69 @@ class ProductDAL:
         category = CategoryDAL.get_category_by_id(category_id=category_id)
         return category.products
 
+class ProductSellerDAL:
+    @staticmethod
+    def create(product_id: int, seller_id: int, selling_price: float, stock: int) -> ProductSellers:
+        new_product_seller = ProductSellers(
+            product_id=product_id,
+            seller_id=seller_id,
+            selling_price=selling_price,
+            stock=stock
+        )
+        try:
+            db.session.add(new_product_seller)
+            db.session.commit()
+        except Exception as e:
+            db.session.rollback()
+            raise e
+        return new_product_seller
+    
+    @staticmethod
+    def update(productseller_id: int, selling_price: float = None, stock: int = None) -> ProductSellers:
+        
+        product_seller = db.session.query(ProductSellers).filter_by(productseller_id=productseller_id).first()
+        if not product_seller:
+            raise ValueError(f"No ProductSeller found with ID {productseller_id}")
+        
+        try:
+            if selling_price is not None:
+                product_seller.selling_price = selling_price
+            if stock is not None:
+                product_seller.stock = stock
+            
+            db.session.commit()
+        except Exception as e:
+            db.session.rollback()
+            raise e
+        return product_seller
+    @staticmethod
+    def delete(productseller_id: int) -> None:
+
+        product_seller = db.session.query(ProductSellers).filter_by(productseller_id=productseller_id).first()
+        if not product_seller:
+            raise ValueError(f"No ProductSeller found with ID {productseller_id}")
+        try:
+            db.session.delete(product_seller)
+            db.session.commit()
+        except Exception as e:
+            db.session.rollback()
+            raise e
+        return product_seller
+    
+    @staticmethod
+    def get_sellers_by_product(product_id: int):
+        return db.session.query(ProductSellers).filter_by(product_id=product_id).all()
+
+    @staticmethod
+    def get_products_by_seller(seller_id: int):
+        return db.session.query(ProductSellers).filter_by(seller_id=seller_id).all()
+
+    @staticmethod
+    def get_product_seller_by_id(id:int) -> ProductSellers:
+        productseller = db.session.get(ProductSellers, id)
+        if not productseller:
+            raise ValueError("Productseller not found")
+        return productseller
 class OrderDAL:
     @staticmethod
     def create(buyer_id:int, items:list[dict]) -> Order:

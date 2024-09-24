@@ -215,3 +215,66 @@ def delete_review(review_id):
     except Exception as e:
         return jsonify({'error': str(e)}), 400  # Bad request
 # endregion
+
+
+# region ProductSellers
+@api.route('/product-sellers', methods=['POST'])
+def create_product_seller():
+    """
+    Create a new product seller.
+    Expects JSON with product_id, seller_id, selling_price, and stock.
+    """
+    data = request.json
+    product_id = data.get('product_id')
+    seller_id = data.get('seller_id')
+    selling_price = data.get('selling_price')
+    stock = data.get('stock')
+
+    try:
+        product_seller = ProductSellerDAL.create(product_id, seller_id, selling_price, stock)
+        return jsonify(product_seller.to_json()), 201  # Created
+    except Exception as e:
+        return jsonify({'error': str(e)}), 400  # Bad request
+    
+@api.route('/product-sellers/<int:productseller_id>', methods=['PUT'])
+def update_product_seller(productseller_id):
+    data = request.json
+    selling_price = data.get('selling_price')
+    stock = data.get('stock')
+
+    try:
+        updated_product_seller = ProductSellerDAL.update(productseller_id, selling_price, stock)
+        return jsonify(updated_product_seller.to_json()), 200  # OK
+    except ValueError as e:
+        return jsonify({'message': str(e)}), 404  # Not found
+    except Exception as e:
+        return jsonify({'error': str(e)}), 400  # Bad request
+    
+@api.route('/product-sellers/<int:productseller_id>', methods=['GET', 'DELETE'])
+def delete_product_seller(productseller_id):
+    if request.method == "DELETE":
+        try:
+            ProductSellerDAL.delete(productseller_id)
+            return jsonify({'message': 'Product seller deleted successfully'}), 204  # No Content
+        except ValueError as e:
+            return jsonify({'message': str(e)}), 404  # Not found
+        except Exception as e:
+            return jsonify({'error': str(e)}), 400  # Bad request
+    else:
+        try:
+            productseller = ProductSellerDAL.get_product_seller_by_id(productseller_id)
+            return jsonify(productseller.to_json()), 200
+        except ValueError as ve:
+            return jsonify({'message':'Product Seller not found'}), 404
+        except Exception as e:
+            return jsonify({'error': str(e)}), 400  # Bad request
+        
+@api.route('/products/<int:product_id>/sellers', methods=['GET'])
+def get_sellers_by_product(product_id):
+    try:
+        sellers = ProductSellerDAL.get_sellers_by_product(product_id)
+        sellers_list = [seller.to_json() for seller in sellers]
+        return jsonify(sellers_list), 200  # OK
+    except Exception as e:
+        return jsonify({'error': str(e)}), 400  # Bad request
+# endregion
