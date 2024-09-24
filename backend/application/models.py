@@ -124,7 +124,7 @@ class ProductSellers(db.Model, TimestampMixin):
     
 @dataclass
 class Review(db.Model, TimestampMixin):
-    review_id: int
+    review_id: int = field(init=False, default=None)
     user_id: int
     product_id:int
     rating: float

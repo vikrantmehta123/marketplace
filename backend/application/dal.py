@@ -132,7 +132,7 @@ class ReviewDAL:
         return review
     
     def get_review_by_id(review_id:int) -> Review:
-        review = Review.query.get(review_id)
+        review = db.session.get(Review, review_id)
         return review
 
     def update(review_id:int, **kwargs) -> Review:
@@ -154,12 +154,19 @@ class ReviewDAL:
 
     def delete(review_id:int) -> Review:
         review = ReviewDAL.get_review_by_id(review_id)
+        if not review:
+            raise ValueError("Review not found")
         try:
             db.session.delete(review)
             db.session.commit()
         except Exception as e:
             raise e
         return review
+    
+    def get_reviews_by_product(product_id:int) -> list[Review]:
+        reviews = db.session.query(Review).filter_by(product_id=product_id).all()
+        print(reviews[0])
+        return reviews
 # endregion
 
 class ProductDAL:

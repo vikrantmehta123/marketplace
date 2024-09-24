@@ -161,3 +161,57 @@ def update_product(product_id):
 
 
 # endregion
+
+# region Review API
+@api.route('/reviews', methods=['POST'])
+def create_review():
+    data = request.json
+    user_id = data.get('user_id')
+    product_id = data.get('product_id')
+    rating = data.get('rating')
+    comment = data.get('comment', None)
+
+    try:
+        review = ReviewDAL.create(user_id, product_id, rating, comment)
+        return jsonify(review.to_json()), 201  # Created
+    except Exception as e:
+        return jsonify({'error': str(e)}), 400  # Bad request
+
+@api.route('/reviews/<int:review_id>', methods=['GET'])
+def get_review(review_id):
+    review = ReviewDAL.get_review_by_id(review_id)
+    if review:
+        return jsonify(review.to_json()), 200  # OK
+    return jsonify({'message': 'Review not found'}), 404  # Not found
+
+@api.route('/products/<int:product_id>/reviews', methods=['GET'])
+def get_reviews_by_product(product_id):
+    try:
+        reviews = ReviewDAL.get_reviews_by_product(product_id)
+        reviews_list = [review.to_json() for review in reviews]
+        return jsonify(reviews_list), 200  # OK
+    except Exception as e:
+        return jsonify({'error': str(e)}), 400
+    
+@api.route('/reviews/<int:review_id>', methods=['PUT'])
+def update_review(review_id):
+    data = request.json
+    print(data)
+    try:
+        updated_review = ReviewDAL.update(review_id, **data)
+        return jsonify(updated_review.to_json()), 200  # OK
+    except ValueError as e:
+        return jsonify({'message': str(e)}), 404  # Not found
+    except Exception as e:
+        return jsonify({'error': str(e)}), 400  # Bad request
+
+@api.route('/reviews/<int:review_id>', methods=['DELETE'])
+def delete_review(review_id):
+    try:
+        ReviewDAL.delete(review_id)
+        return jsonify({'message': 'Review deleted successfully'}), 204  # No Content
+    except ValueError as e:
+        return jsonify({'message': str(e)}), 404  # Not found
+    except Exception as e:
+        return jsonify({'error': str(e)}), 400  # Bad request
+# endregion
