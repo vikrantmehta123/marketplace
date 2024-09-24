@@ -167,6 +167,7 @@ backend/instance/
 backend/.ipynb_checkpoints
 backend/db.sqlite3
 backend/.env
+backend/myvenv/
 
 # PyInstaller
 #  Usually these files are written by a python script from a template
