@@ -1,19 +1,21 @@
+import pytest
+from application.models import *
+from application import create_testing_app  # Import the app variable
 import sys
 import os
 
 # Ensure the backend directory is in the system path
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../')))
+sys.path.insert(0, os.path.abspath(
+    os.path.join(os.path.dirname(__file__), '../')))
 
-from application import create_testing_app  # Import the app variable
-from application.models import *
 
-roles =     { 
-        1: "Admin", 
-        2: "Seller", 
-        3: "Buyer"
-    }
+roles = {
+    1: "Admin",
+    2: "Seller",
+    3: "Buyer"
+}
 
-import pytest
+
 @pytest.fixture
 def client():
     app = create_testing_app()

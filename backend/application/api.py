@@ -1,5 +1,6 @@
 from flask import Blueprint, request, jsonify
 from .dal import *
+from . import cache
 
 api = Blueprint('api', __name__, url_prefix='/api/v1')
 
@@ -9,17 +10,21 @@ api = Blueprint('api', __name__, url_prefix='/api/v1')
 def create_user():
     data = request.json
     
-    user = UserDAL.create(
-        username=data['username'],
-        email=data['email'],
-        password=data['password'],
-        contact=data['contact'],
-        address=data['address'],
-        roles=data.get('roles', []) 
-    )
-    return jsonify(user.to_json()), 201
-
-
+    try:
+        user = UserDAL.create(
+            username=data['username'],
+            email=data['email'],
+            password=data['password'],
+            contact=data['contact'],
+            address=data['address'],
+            roles=data.get('roles', []) 
+        )
+        return jsonify(user.to_json()), 201
+    except IntegrityError as ie:
+        return jsonify({'error': 'User already exists'}), 404
+    except Exception as e:
+        return jsonify({'error': str(e.args[0])}), 404
+    
 @api.route('/users/<int:user_id>', methods=['GET'])
 def get_user_by_id(user_id):
     user = UserDAL.get_user_by_id(user_id)
@@ -58,11 +63,13 @@ def create_category():
     
     try:
         category = CategoryDAL.create(name=category_name)
+        cache.delete('categories')
         return jsonify(category.to_json()), 201  # Created
     except Exception as e:
         return jsonify({"error": str(e)}), 500  # Internal Server Error
     
 @api.route('/category', methods=['GET'])
+@cache.cached(timeout=86400, key_prefix='categories') # Cache for 1 day
 def get_all_categories():
     categories = CategoryDAL.get_all_categories()
     categories = [category.to_json() for category in categories]
@@ -89,6 +96,7 @@ def update_category(category_id):
     
     try:
         category = CategoryDAL.update(category_id=category_id, category_name=category_name)
+        cache.delete('categories')
         return jsonify(category.to_json()), 200  # OK
     except ValueError as ve:
         return jsonify({"error": str(ve)}), 404  # Not Found
@@ -99,6 +107,7 @@ def update_category(category_id):
 def delete_category(category_id):
     try:
         category = CategoryDAL.delete(category_id)
+        cache.delete('categories')
         return jsonify({"message": "Category deleted successfully", "category": category.to_json()}), 200  # OK
     except ValueError as ve:
         return jsonify({"error": str(ve)}), 404  # Not Found
@@ -117,9 +126,16 @@ def get_products_by_category():
     if not category_id:
         return jsonify({"error": "category_id is required"}), 400 
     
+    cache_key = f'products_by_category:{category_id}'
+    cached_data = cache.get(cache_key)
+    if cached_data:
+        return jsonify(cached_data), 200
+
     try:
         products = ProductDAL.get_products_by_category(category_id)
         products_list = [product.to_json() for product in products]
+
+        cache.set(cache_key, products_list, timeout=86400)  # Cache products for one day
 
         return jsonify(products_list), 200 
     
@@ -141,8 +157,15 @@ def create_product():
     category_id = data.get('category_id')
     created_by = data.get('created_by')
 
-    product = ProductDAL.create(product_name, description, category_id, created_by)
-    return jsonify(product.to_json()), 201  # Return the created product with a 201 status code
+    cache_key = f'products_by_category:{category_id}'
+    cache.delete(cache_key)
+
+    try:
+        product = ProductDAL.create(product_name, description, category_id, created_by)
+        return jsonify(product.to_json()), 201  # Return the created product with a 201 status code
+    except Exception as e:
+        return jsonify({'message':str(e)}), 500
+
 
 @api.route('/products/<int:product_id>', methods=['PUT'])
 def update_product(product_id):
@@ -155,6 +178,15 @@ def update_product(product_id):
     # Update product with provided data
     try:
         updated_product = ProductDAL.update(product_id, **data)
+
+        category_id = product.category_id
+        cache_key = f'products_by_category:{category_id}'
+        cache.delete(cache_key)
+
+        cache_key = f'products_by_category:{updated_product.category_id}'
+        cache.delete(cache_key)
+        
+
         return jsonify(updated_product.to_json())
     except AttributeError as e:
         return jsonify({'message': str(e)}), 400  # Return a 400 for bad requests
@@ -173,6 +205,7 @@ def create_review():
 
     try:
         review = ReviewDAL.create(user_id, product_id, rating, comment)
+        cache.delete_memoized(get_reviews_by_product, product_id)
         return jsonify(review.to_json()), 201  # Created
     except Exception as e:
         return jsonify({'error': str(e)}), 400  # Bad request
@@ -185,6 +218,7 @@ def get_review(review_id):
     return jsonify({'message': 'Review not found'}), 404  # Not found
 
 @api.route('/products/<int:product_id>/reviews', methods=['GET'])
+@cache.memoize(timeout=86400)  # Cache for 1 day
 def get_reviews_by_product(product_id):
     try:
         reviews = ReviewDAL.get_reviews_by_product(product_id)
@@ -196,7 +230,6 @@ def get_reviews_by_product(product_id):
 @api.route('/reviews/<int:review_id>', methods=['PUT'])
 def update_review(review_id):
     data = request.json
-    print(data)
     try:
         updated_review = ReviewDAL.update(review_id, **data)
         return jsonify(updated_review.to_json()), 200  # OK
@@ -208,7 +241,10 @@ def update_review(review_id):
 @api.route('/reviews/<int:review_id>', methods=['DELETE'])
 def delete_review(review_id):
     try:
-        ReviewDAL.delete(review_id)
+        review = ReviewDAL.delete(review_id)
+
+        product_id = review.product_id
+        cache.delete_memoized(get_reviews_by_product, product_id)
         return jsonify({'message': 'Review deleted successfully'}), 204  # No Content
     except ValueError as e:
         return jsonify({'message': str(e)}), 404  # Not found
@@ -288,11 +324,19 @@ def create_order():
 
     try:
         order = OrderDAL.create(buyer_id=buyer_id, items=items)
+
+        buyer_id = order.buyer_id
+        cache_key = f"get_order_by_buyer:{buyer_id}"
+        cache.delete(cache_key)
+
+        cache.delete_memoized(get_order, order.order_id)
+
         return jsonify(order.to_json()), 201  # Created
     except Exception as e:
         return jsonify({'error': str(e)}), 400  # Bad request
 
 @api.route('/orders/<int:order_id>', methods=['GET'])
+@cache.memoize(timeout=86400)
 def get_order(order_id):
     order = OrderDAL.get_order_by_id(order_id)
     if order:
@@ -304,12 +348,23 @@ def get_order_by_buyer():
     data = request.json
     buyer_id = data.get('buyer_id')
     orderlist = OrderDAL.get_order_by_buyer(buyer_id=buyer_id)
+
+    cache_key = f"get_order_by_buyer:{buyer_id}"
+    cache.set(cache_key, orderlist, timeout=86400) 
+
     return jsonify(orderlist), 200
 
 @api.route('/orders/<int:order_id>', methods=['DELETE'])
 def delete_order(order_id):
     try:
         deleted_order = OrderDAL.delete(order_id=order_id)
+
+        buyer_id = deleted_order.buyer_id
+        cache_key = f"get_order_by_buyer:{buyer_id}"
+        cache.delete(cache_key)
+
+        cache.delete_memoized(get_order, deleted_order.order_id)
+
         return jsonify(deleted_order.to_json()), 204  # No Content
     except ValueError as e:
         return jsonify({'message': str(e)}), 404  # Not found
