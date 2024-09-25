@@ -1,6 +1,6 @@
 from flask import Blueprint, request, jsonify
 from .dal import *
-from . import cache
+from application.cache import cache
 
 api = Blueprint('api', __name__, url_prefix='/api/v1')
 

@@ -1,11 +1,7 @@
 from flask import Flask
-from .api import api
 from .models import db, User, Role
 from .dal import UserDAL
 from flask_cors import CORS
-from flask_cache import Cache
-
-cache = Cache(config={'CACHE_TYPE':'SimpleCache'})
 
 def setup_initial_data():
     roles = {1: 'admin', 2: 'editor', 3: 'viewer'}
@@ -38,6 +34,8 @@ def create_testing_app():
 
     # Initialize the app with the db instance
     db.init_app(app)
+    from .api import api
+    
     app.register_blueprint(api)
 
     return app
@@ -49,9 +47,12 @@ def create_development_app():
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
     CORS(app, resources={r"/*": {"origins": "http://localhost:3000"}})
+    
     db.init_app(app)
-    app.register_blueprint(api)
+    from .api import api
+    from .cache import cache
 
+    app.register_blueprint(api)
     cache.init_app(app=app)
     with app.app_context():
         db.create_all()  # Create tables
