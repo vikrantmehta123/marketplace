@@ -69,7 +69,7 @@ def create_category():
         return jsonify({"error": str(e)}), 500  # Internal Server Error
     
 @api.route('/category', methods=['GET'])
-@cache.cached(timeout=86400, key_prefix='categories') # Cache for 1 day
+#@cache.cached(timeout=86400, key_prefix='categories') # Cache for 1 day
 def get_all_categories():
     categories = CategoryDAL.get_all_categories()
     categories = [category.to_json() for category in categories]
