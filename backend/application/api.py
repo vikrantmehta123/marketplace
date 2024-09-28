@@ -72,7 +72,7 @@ def create_category():
 #@cache.cached(timeout=86400, key_prefix='categories') # Cache for 1 day
 def get_all_categories():
     categories = CategoryDAL.get_all_categories()
-    categories = [category for category in categories]
+    categories = [category.to_json() for category in categories]
     return jsonify(categories), 200
 
 @api.route('/category/<int:category_id>', methods=['GET'])
@@ -118,25 +118,23 @@ def delete_category(category_id):
 
 # region API for Products
 
-@api.route('/products', methods=['GET'])
-def get_products_by_category():
-    data = request.json
-    category_id = data.get('category_id')
-    
+@api.route('/products/category/<int:category_id>', methods=['GET'])
+def get_products_by_category(category_id):
     if not category_id:
         return jsonify({"error": "category_id is required"}), 400 
     
-    cache_key = f'products_by_category:{category_id}'
-    cached_data = cache.get(cache_key)
-    if cached_data:
-        return jsonify(cached_data), 200
+    # cache_key = f'products_by_category:{category_id}'
+    # cached_data = cache.get(cache_key)
+    # if cached_data:
+    #     return jsonify(cached_data), 200
 
     try:
         products = ProductDAL.get_products_by_category(category_id)
         products_list = [product.to_json() for product in products]
 
-        cache.set(cache_key, products_list, timeout=86400)  # Cache products for one day
+        # cache.set(cache_key, products_list, timeout=86400)  # Cache products for one day
 
+        print(products_list)
         return jsonify(products_list), 200 
     
     except Exception as e:
