@@ -205,3 +205,25 @@ class WishlistItems(db.Model, TimestampMixin):
     product_id = Column(Integer, ForeignKey('product.product_id'), nullable=False)
     wishlist_id = Column(Integer, ForeignKey('wishlist.wishlist_id'), nullable=False)
 
+@dataclass
+class Cart(db.Model):
+    cart_id:int
+    user_id:int
+    cartitems: list
+
+    cart_id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id = Column(Integer, ForeignKey('user.user_id'), nullable=False)
+
+    cartitems = relationship("CartItems", backref='cart', cascade='all, delete')
+
+@dataclass
+class CartItems(db.Model, TimestampMixin):
+    cartitems_id:int
+    cart_id:int
+    product_id:int
+    quantity:int
+
+    cartitems_id = Column(Integer, primary_key=True, autoincrement=True)
+    cart_id = Column(Integer, ForeignKey('cart.cart_id'), nullable=False)
+    product_id = Column(Integer, ForeignKey('product.product_id'), nullable=False)
+    quantity = Column(Integer, nullable=False)
