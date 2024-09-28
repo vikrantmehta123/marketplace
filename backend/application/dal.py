@@ -2,6 +2,7 @@ from sqlalchemy.exc import IntegrityError
 from .models import *
 import bcrypt
 from .exceptions import *
+import json
 
 SALT ="some-string"
 
@@ -116,6 +117,7 @@ class CategoryDAL:
     @staticmethod 
     def get_all_categories() -> list[Category]:
         categories = db.session.query(Category).all()
+
         return categories
 # endregion
 
@@ -207,6 +209,11 @@ class ProductDAL:
     def get_products_by_category(category_id:int) -> list[Product]:
         category = CategoryDAL.get_category_by_id(category_id=category_id)
         return category.products
+    
+    @staticmethod
+    def get_all_products() -> list[Product]:
+        products = db.session.query(Product).all()
+        return products
 
 class ProductSellerDAL:
     @staticmethod
@@ -263,8 +270,13 @@ class ProductSellerDAL:
 
     @staticmethod
     def get_products_by_seller(seller_id: int):
-        return db.session.query(ProductSellers).filter_by(seller_id=seller_id).all()
-
+        seller = UserDAL.get_user_by_id(seller_id)
+        res = { 'seller' : str(seller) }
+        res['product_bids'] = [ ]
+        for bid in seller.product_bids:
+            res["product_bids"].append(str(bid))
+        return json.dumps(res)
+    
     @staticmethod
     def get_product_seller_by_id(id:int) -> ProductSellers:
         productseller = db.session.get(ProductSellers, id)

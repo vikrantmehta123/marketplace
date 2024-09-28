@@ -72,7 +72,7 @@ def create_category():
 #@cache.cached(timeout=86400, key_prefix='categories') # Cache for 1 day
 def get_all_categories():
     categories = CategoryDAL.get_all_categories()
-    categories = [category.to_json() for category in categories]
+    categories = [category for category in categories]
     return jsonify(categories), 200
 
 @api.route('/category/<int:category_id>', methods=['GET'])
@@ -307,12 +307,14 @@ def delete_product_seller(productseller_id):
         
 @api.route('/product-sellers/bids', methods=['GET'])
 def get_product_bids():
-    user_id = request.form.get('user_id')
+    user_id = request.headers.get('user_id')
+
     try:
         productbids = ProductSellerDAL.get_products_by_seller(seller_id=user_id)
-        product_bids = [prdbid.to_json() for prdbid in productbids]
-        return jsonify(product_bids), 200
+        print(productbids)
+        return jsonify(productbids), 200
     except Exception as e:
+        print(e.args[0])
         return jsonify({'message':str(e)}), 500
 
 @api.route('/products/<int:product_id>/sellers', methods=['GET'])

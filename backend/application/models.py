@@ -1,25 +1,34 @@
-from sqlalchemy import Column, Integer, String, Float, Boolean, ForeignKey, TIMESTAMP, Text
+from sqlalchemy import Integer, String, Float, Boolean, ForeignKey, Text, DateTime
 from sqlalchemy.orm import relationship
 from dataclasses import dataclass, field
 import dataclasses
 import datetime
 from flask_sqlalchemy import *
-from sqlalchemy.orm import DeclarativeBase
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, MappedAsDataclass
+from sqlalchemy.sql import func
+import json
 
-class Base(DeclarativeBase):
-  pass
+
+class TimestampMixin:
+    created_at: Mapped[datetime.datetime] = mapped_column(
+        DateTime(timezone=True), default=func.now()
+    )
+    updated_at: Mapped[datetime.datetime] = mapped_column(
+        DateTime(timezone=True), default=func.now(), onupdate=func.now()
+    )
+
+    def __init__(self) -> None:
+        self.created_at = func.now()
+        self.updated_at = func.now()
+
+
+class Base(MappedAsDataclass, DeclarativeBase):
+    pass
+
 
 db = SQLAlchemy(model_class=Base)
 
-@dataclass
-class TimestampMixin:
-    created_at:datetime.datetime
-    updated_at:datetime.datetime
 
-    created_at = Column(TIMESTAMP, default=datetime.datetime.now(), nullable=False)
-    updated_at = Column(TIMESTAMP, default=datetime.datetime.now(), onupdate=datetime.datetime.now(), nullable=False,)
-
-@dataclass
 class Role(db.Model):
     """
     { 
@@ -29,201 +38,277 @@ class Role(db.Model):
     }
     """
 
-    role_id: int = field(init=False, default=None)
-    role_name:str
+    role_id = mapped_column(Integer, init=False, primary_key=True)
+    role_name: Mapped[str] = mapped_column(
+        unique=True, nullable=False, init=False)
 
-    role_id = Column(Integer, primary_key=True, autoincrement=True)
-    role_name = Column(String(120), unique=True, nullable=False)
+    def __init__(self, role_id, role_name) -> None:
+        super().__init__()
+        self.role_id = role_id
+        self.role_name = role_name
+
+    def __repr__(self) -> str:
+        res = {'role_id': self.role_id, 'role_name': self.role_name}
+        return json.dumps(res)
+
+
+class User(db.Model):
+    user_id = mapped_column(Integer, primary_key=True,
+                            autoincrement=True, nullable=False)
+    username: Mapped[str] = mapped_column(
+        unique=True, nullable=False, index=True)
+    email: Mapped[str] = mapped_column(unique=True, nullable=False, index=True)
+    password: Mapped[str] = mapped_column(nullable=False, init=False)
+    contact: Mapped[str] = mapped_column(nullable=False, init=False)
+    address: Mapped[str] = mapped_column(nullable=False, init=False)
+
+    product_bids: Mapped[list['ProductSellers']] = relationship(
+        'ProductSellers', back_populates='seller')
+
+    def __init__(self, username: str, email: str, password: str, contact: str, address: str) -> None:
+        super().__init__()
+        self.username = username
+        self.email = email
+        self.password = password
+        self.contact = contact
+        self.address = address
 
     def to_json(self) -> dict:
-        return dataclasses.asdict(self)
+        """Convert the User instance to a JSON-compatible dict."""
+        return {
+            'user_id': self.user_id,
+            'username': self.username,
+            'email': self.email,
+            'contact': self.contact,
+            'address': self.address
+        }
 
-@dataclass
-class User(db.Model, TimestampMixin):
-    user_id: int = field(init=False, default=None)
-    username: str
-    email: str
-    contact: str
-    address: str
-    roles: list['Role'] = field(default_factory=list)
+    def __str__(self) -> str:
+        """Return a JSON string representation of the object."""
+        return json.dumps(self.to_json())
 
-    user_id = Column(Integer, primary_key=True, autoincrement=True)
-    username = Column(String(125), unique=True, nullable=False, index=True)
-    email = Column(String(255), unique=True, nullable=False, index=True)
-    password = Column(String(255), nullable=False)
-    contact = Column(String(10), nullable=False)
-    address = Column(String(255), nullable=False)
 
-    def to_json(self) -> dict:
-        return dataclasses.asdict(self)
-
-@dataclass
 class UserRole(db.Model):
-    userrole_id = Column(Integer, primary_key=True)
-    user_id = Column(Integer, ForeignKey('user.user_id'))
-    role_id = Column(Integer, ForeignKey('role.role_id'))
+    userrole_id = mapped_column(
+        Integer, primary_key=True, autoincrement=True, init=True)
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey('user.user_id'), init=False)
+    role_id: Mapped[int] = mapped_column(
+        ForeignKey('role.role_id'), init=False)
 
-    user = relationship('User', backref='roles')
-    role = relationship('Role', backref='users') 
+    user = relationship('User', backref='roles', repr=False)
+    role = relationship('Role', backref='users')
+
+    def __init__(self, user_id, role_id) -> None:
+        super().__init__()
+        self.user_id = user_id
+        self.role_id = role_id
 
 
-    def to_json(self) -> dict:
-        return dataclasses.asdict(self)
-@dataclass
 class Category(db.Model):
-    category_id : int
-    category_name: str
-    products:list['Product'] = field(default_factory=list)
+    category_id = mapped_column(
+        Integer, primary_key=True, autoincrement=True, init=True)
+    category_name: Mapped[str] = mapped_column(
+        unique=True, nullable=False, init=False)
 
-    category_id = Column(Integer, primary_key=True, autoincrement=True)
-    category_name = Column(String(120), unique=True, nullable=False)
+    products = relationship('Product', back_populates='category')
+
+    def __init__(self, category_name) -> None:
+        super().__init__()
+        self.category_name = category_name
+
+    def to_json(self) -> dict:
+        return {
+            'category_id' : self.category_id,
+            'category_name': self.category_name
+        }
+
+    def __repr__(self) -> str:
+        return json.dumps(self.to_json())
+
+
+class Product(db.Model):
+    product_id = mapped_column(Integer, primary_key=True, autoincrement=True)
+    product_name: Mapped[str] = mapped_column(nullable=False)
+    description: Mapped[str] = mapped_column(nullable=False)
+    created_by: Mapped[int] = mapped_column(
+        Integer, ForeignKey('user.user_id'))
+    category_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey('category.category_id', ondelete='CASCADE'))
+
+    category: Mapped['Category'] = relationship(
+        'Category', back_populates='products')
+    sellers: Mapped[list['Product']] = relationship(
+        'ProductSellers', back_populates='product')
+
+    def __init__(self, product_name: str, description: str, created_by: int, category_id: int) -> None:
+        super().__init__()
+        self.product_name = product_name
+        self.description = description
+        self.created_by = created_by
+        self.category_id = category_id
+
+    def to_json(self) -> dict:
+        """Convert the Product instance to a JSON-compatible dict."""
+        return {
+            'product_id': self.product_id,
+            'product_name': self.product_name,
+            'description': self.description,
+            'category': {
+                'category_id': self.category.category_id,
+                'category_name': self.category.category_name
+            }
+        }
+
+    def __repr__(self) -> str:
+        """Return a JSON string representation of the object."""
+        return json.dumps(self.to_json())
+
+
+class ProductSellers(db.Model):
+    productseller_id = mapped_column(
+        Integer, primary_key=True, autoincrement=True)
+    product_id = mapped_column(Integer, ForeignKey(
+        'product.product_id'), init=False)
+    seller_id = mapped_column(Integer, ForeignKey('user.user_id'), init=False)
+    selling_price = mapped_column(Float, nullable=False)
+    stock = mapped_column(Integer, nullable=False)
+
+    seller = relationship('User', back_populates="product_bids")
+    product = relationship('Product', back_populates='sellers')
+
+    def __init__(self, product_id: int, seller_id: int, selling_price: float, stock: int) -> None:
+        super().__init__()
+        self.product_id = product_id
+        self.seller_id = seller_id
+        self.selling_price = selling_price
+        self.stock = stock
+
+    def to_json(self):
+        """Convert the ProductSellers instance to a JSON-compatible dict."""
+        return {
+            'productseller_id': self.productseller_id,
+            # Ensure product is a dict
+            'product': json.loads(str(self.product)),
+            'stock': self.stock,
+            'price': self.selling_price,
+        }
+
+    def __repr__(self) -> str:
+        """Return a JSON string representation of the object."""
+        return json.dumps(self.to_json(), default=str)
+
+
+class Review(db.Model):
+    review_id = mapped_column(Integer, primary_key=True, autoincrement=True)
+    user_id = mapped_column(Integer, ForeignKey('user.user_id'))
+    product_id = mapped_column(Integer, ForeignKey('product.product_id'))
+    rating = mapped_column(Float, nullable=False)
+    comment = mapped_column(Text, nullable=True)
+
+    user = relationship('User', backref='reviews', repr=False)
+    product = relationship('Product', backref='reviews', repr=False)
+
+    def __init__(self, user_id: int, product_id: int, rating: float, comment: str) -> None:
+        super().__init__()
+        self.user_id = user_id
+        self.product_id = product_id
+        self.rating = rating
+        self.comment = comment
 
     def to_json(self) -> dict:
         return dataclasses.asdict(self)
 
-@dataclass
-class Product( db.Model, TimestampMixin):
-    product_id:int = field(init=False, default=None)
-    product_name:str
-    description:str
-    category_id:int
-    reviews:list['Review'] = field(default_factory=list)
-    sellers:list['User'] = field(default_factory=list)
-    orders:list['OrderItems'] = field(default_factory=list)
 
-    product_id = Column(Integer, primary_key=True, autoincrement=True)
-    product_name = Column(String(255), nullable=False)
-    description = Column(Text, nullable=False)
-    created_by = Column(Integer, ForeignKey('user.user_id'))
-    category_id = Column(Integer, ForeignKey('category.category_id', ondelete='CASCADE'))
+class Order(db.Model):
+    __tablename__ = 'order'  # Specify the table name
 
-    category = relationship('Category', backref='products')
+    order_id = mapped_column(Integer, primary_key=True, autoincrement=True)
+    buyer_id = mapped_column(Integer, ForeignKey(
+        'user.user_id'), nullable=False)
+
+    buyer = relationship('User', backref='purchase_orders', repr=False)
+    orderitems = relationship(
+        'OrderItems', backref='order', cascade='all, delete')
+
+    def __init__(self, buyer_id: int) -> None:
+        super().__init__()
+        self.buyer_id = buyer_id
 
     def to_json(self) -> dict:
         return dataclasses.asdict(self)
 
-@dataclass
-class ProductSellers(db.Model, TimestampMixin):
-    productseller_id:int
-    product_id:int
-    seller_id:int
-    selling_price:float
-    stock:int
 
-    productseller_id = Column(Integer, primary_key=True, autoincrement=True)
-    product_id = Column(Integer, ForeignKey('product.product_id'))
-    seller_id = Column(Integer, ForeignKey('user.user_id'))
-    selling_price = Column(Float, nullable=False)
-    stock = Column(Integer, nullable=False)    
-
-    seller = relationship('User', backref="product_bids")
-    product = relationship('Product', backref='sellers')
-    
-    def to_json(self) -> dict:
-        return dataclasses.asdict(self)
-    
-@dataclass
-class Review(db.Model, TimestampMixin):
-    review_id: int = field(init=False, default=None)
-    user_id: int
-    product_id:int
-    rating: float
-    comment:str
-
-    review_id = Column(Integer, primary_key=True, autoincrement=True)
-    user_id = Column(Integer, ForeignKey('user.user_id'))
-    product_id = Column(Integer, ForeignKey('product.product_id'))
-    rating = Column(Float, nullable=False)
-    comment = Column(Text, nullable=True)
-
-    user = relationship('User', backref='reviews')
-    product = relationship('Product', backref='reviews')
-
-    def to_json(self) -> dict:
-        return dataclasses.asdict(self)
-
-@dataclass
-class Order(db.Model, TimestampMixin):
-    order_id:int
-    buyer_id:int
-    orderitems: list['OrderItems'] = field(default_factory=list)
-
-    order_id = Column(Integer, primary_key=True, autoincrement=True)
-    buyer_id = Column(Integer, ForeignKey('user.user_id'), nullable=False)
-
-    buyer = relationship('User', backref='purchase_orders')
-    orderitems = relationship('OrderItems', backref='order', cascade='all, delete')
-
-    def to_json(self) -> dict:
-        return dataclasses.asdict(self)
-
-@dataclass
 class OrderItems(db.Model):
-    orderitems_id:int
-    order_id:int
-    seller_id:int
-    product_id:int
-    price:float
-    quantity:int
-    is_completed:bool
+    __tablename__ = 'order_items'  # Specify the table name
 
-    orderitems_id = Column(Integer, primary_key=True, autoincrement=True)
-    order_id = Column(Integer, ForeignKey('order.order_id'), nullable=False)
-    seller_id = Column(Integer, ForeignKey('user.user_id'), nullable=False)
-    product_id = Column(Integer, ForeignKey('product.product_id'), nullable=False)
-    price = Column(Float, nullable=False)
-    quantity = Column(Integer, nullable=False)
-    is_completed = Column(Boolean, default=False)
+    orderitems_id = mapped_column(
+        Integer, primary_key=True, autoincrement=True)
+    order_id = mapped_column(Integer, ForeignKey(
+        'order.order_id'), nullable=False)
+    seller_id = mapped_column(
+        Integer, ForeignKey('user.user_id'), nullable=False)
+    product_id = mapped_column(Integer, ForeignKey(
+        'product.product_id'), nullable=False)
+    price = mapped_column(Float, nullable=False)
+    quantity = mapped_column(Integer, nullable=False)
+    is_completed = mapped_column(Boolean, default=False)
 
-    seller = relationship('User', backref='sales_orders')
-    product = relationship('Product', backref='orders')
+    seller = relationship('User', backref='sales_orders',
+                          lazy='select', repr=False)
+    product = relationship('Product', backref='orders', repr=False)
+
+    def __init__(self, seller_id: int, product_id: int, price: float, quantity: int, is_completed=False) -> None:
+        super().__init__()
+        self.seller_id = seller_id
+        self.product_id = product_id
+        self.price = price
+        self.quantity = quantity
+        self.is_completed = is_completed
 
     def to_json(self) -> dict:
         return dataclasses.asdict(self)
-    
 
-@dataclass
+
 class Wishlist(db.Model):
-    wishlist_id:int
-    user_id:int
-    wishlist_name:str
-
-    wishlist_id = Column(Integer, primary_key=True, autoincrement=True)
-    user_id = Column(Integer, ForeignKey('user.user_id'), nullable=False)
-    wishlist_name = Column(String(255), nullable=False)
+    wishlist_id = mapped_column(Integer, primary_key=True, autoincrement=True)
+    user_id = mapped_column(Integer, ForeignKey(
+        'user.user_id'), nullable=False)
+    wishlist_name = mapped_column(String(255), nullable=False)
 
     user = relationship('User', backref='wishlist')
-    wishlist_items = relationship('WishlistItems', backref='wishlist', cascade='all, delete')
+    wishlist_items = relationship(
+        'WishlistItems', backref='wishlist', cascade='all, delete', repr=False)
 
-@dataclass
-class WishlistItems(db.Model, TimestampMixin):
-    wishlist_id:int
-    wishlist_itemid : int
-    product_id: int
 
-    wishlist_itemid = Column(Integer, primary_key=True, autoincrement=True)
-    product_id = Column(Integer, ForeignKey('product.product_id'), nullable=False)
-    wishlist_id = Column(Integer, ForeignKey('wishlist.wishlist_id'), nullable=False)
+class WishlistItems(db.Model):
+    wishlist_itemid = mapped_column(
+        Integer, primary_key=True, autoincrement=True)
+    product_id = mapped_column(Integer, ForeignKey(
+        'product.product_id'), nullable=False)
+    wishlist_id = mapped_column(Integer, ForeignKey(
+        'wishlist.wishlist_id'), nullable=False)
 
-@dataclass
+
 class Cart(db.Model):
-    cart_id:int
-    user_id:int
-    cartitems: list
+    __tablename__ = 'cart'
 
-    cart_id = Column(Integer, primary_key=True, autoincrement=True)
-    user_id = Column(Integer, ForeignKey('user.user_id'), nullable=False)
+    cart_id = mapped_column(Integer, primary_key=True, autoincrement=True)
+    user_id = mapped_column(Integer, ForeignKey(
+        'user.user_id'), nullable=False)
 
-    cartitems = relationship("CartItems", backref='cart', cascade='all, delete')
+    # Relationship to CartItems
+    cartitems = relationship("CartItems", backref='cart',
+                             cascade='all, delete', repr=False)
 
-@dataclass
-class CartItems(db.Model, TimestampMixin):
-    cartitems_id:int
-    cart_id:int
-    product_id:int
-    quantity:int
 
-    cartitems_id = Column(Integer, primary_key=True, autoincrement=True)
-    cart_id = Column(Integer, ForeignKey('cart.cart_id'), nullable=False)
-    product_id = Column(Integer, ForeignKey('product.product_id'), nullable=False)
-    quantity = Column(Integer, nullable=False)
+class CartItems(db.Model):
+
+    __tablename__ = 'cartitems'
+
+    cartitems_id = mapped_column(Integer, primary_key=True, autoincrement=True)
+    cart_id = mapped_column(Integer, ForeignKey(
+        'cart.cart_id'), nullable=False)
+    product_id = mapped_column(Integer, ForeignKey(
+        'product.product_id'), nullable=False)
+    quantity = mapped_column(Integer, nullable=False)
