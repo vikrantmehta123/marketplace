@@ -40,3 +40,14 @@ a {
     color-scheme: dark;
   }
 }
+
+
+.warning-button {
+  width: 75%;
+  color: black;
+  transition: background-color 0.3s ease; /* Optional: Smooth transition on hover */
+}
+
+.warning-button:hover {
+  background-color: #E4B747; /* Change color on hover */
+}

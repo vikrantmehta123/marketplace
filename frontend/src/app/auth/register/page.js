@@ -112,11 +112,7 @@ const RegistrationForm = () => {
                 {error && <Typography color="error">{error}</Typography>}
 
                 <Box display="flex" justifyContent="center">
-                    <Button variant="contained" type="submit" sx={{
-                        width: '75%', backgroundColor: '#f0c14b', color: 'black', '&:hover': {
-                            backgroundColor: '#E4B747' // Optional: Change color on hover
-                        }
-                    }}>
+                    <Button variant="contained" type="submit" className='warning-button' sx={{backgroundColor: '#f0c14b'}}>
                         Register
                     </Button>
                 </Box>

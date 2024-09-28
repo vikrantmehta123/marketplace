@@ -14,6 +14,7 @@ import AddIcon from '@mui/icons-material/Add';
 import CategoryItem from './CategoryItem';
 import CategoryForm from './CategoryForm';
 import ConfirmationDialog from './ConfirmationDialog';
+import axios from 'axios';
 
 const CategoryList = () => {
     const [categories, setCategories] = useState([]);
@@ -29,20 +30,9 @@ const CategoryList = () => {
     }, []);
 
     const fetchCategories = async () => {
-        // const response = await fetch('/api/categories'); // Your API endpoint
-        // const data = await response.json();
-        const data = [
-            {
-                'name': 'Books',
-                'description': 'Collection of books of all genres'
-            },
-            {
-                'name': 'Apparel',
-                'description': 'Fashion for the nation'
-            }
-        ]
-        setCategories(data);
-        setFilteredCategories(data); // Initialize filtered categories
+        const response = await axios.get('http://127.0.0.1:5000/api/v1/category');
+        setCategories(response.data);
+        setFilteredCategories(response.data); // Initialize filtered categories
     };
 
     const handleEdit = (category) => {
@@ -62,7 +52,7 @@ const CategoryList = () => {
 
     const handleFormSubmit = async (category) => {
         const response = selectedCategory
-            ? await fetch(`/api/categories/${selectedCategory.id}`, {
+            ? await fetch(`/api/categories/${selectedCategory.category_id}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(category),
@@ -78,7 +68,7 @@ const CategoryList = () => {
     };
 
     const handleDeleteConfirm = async () => {
-        await fetch(`/api/categories/${categoryToDelete.id}`, { method: 'DELETE' });
+        await fetch(`/api/categories/${categoryToDelete.category_id}`, { method: 'DELETE' });
         await fetchCategories(); // Update the list
         setConfirmOpen(false);
     };
@@ -89,7 +79,7 @@ const CategoryList = () => {
         setSearchTerm(value);
         // Filter categories based on the search term
         const filtered = categories.filter((category) =>
-            category.name.toLowerCase().includes(value.toLowerCase()) || category.description.toLowerCase().includes(value.toLowerCase())
+            category.category_name.toLowerCase().includes(value.toLowerCase())
         );
         setFilteredCategories(filtered);
     };
@@ -118,7 +108,7 @@ const CategoryList = () => {
             <List>
                 {filteredCategories.map((category) => (
                     <CategoryItem
-                        key={category.id}
+                        key={category.category_id}
                         category={category}
                         onEdit={handleEdit}
                         onDelete={handleDelete}
@@ -134,7 +124,7 @@ const CategoryList = () => {
             )}
             {isConfirmOpen && (
                 <ConfirmationDialog
-                    message={`Are you sure you want to delete "${categoryToDelete.name}"?`}
+                    message={`Are you sure you want to delete "${categoryToDelete.category_name}"?`}
                     onConfirm={handleDeleteConfirm}
                     onCancel={() => setConfirmOpen(false)}
                 />

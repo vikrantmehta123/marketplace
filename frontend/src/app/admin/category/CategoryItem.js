@@ -13,10 +13,7 @@ const CategoryItem = ({ category, onEdit, onDelete }) => {
       }}
     >
       <Box>
-        <Typography variant="body1">{category.name}</Typography>
-        <Typography variant="body2" color="textSecondary">
-          {category.description}
-        </Typography>
+        <Typography variant="body1">{category.category_name}</Typography>
       </Box>
       <Box>
         <Button variant="contained" onClick={() => onEdit(category)}>
