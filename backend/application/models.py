@@ -239,7 +239,7 @@ class Order(db.Model):
         return dataclasses.asdict(self)
 
 
-class OrderItems(db.Model):
+class OrderItem(db.Model):
     __tablename__ = 'order_items'  # Specify the table name
 
     orderitems_id = mapped_column(

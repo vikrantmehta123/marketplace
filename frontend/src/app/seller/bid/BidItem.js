@@ -1,7 +1,7 @@
 import React from 'react';
 import { Box, Typography, Button } from '@mui/material';
 
-const BidItem = ({ product: productBid, onEdit, onDelete }) => {
+const BidItem = ({ productBid, onEdit, onDelete }) => {
   return (
     <Box
       sx={{
@@ -13,9 +13,9 @@ const BidItem = ({ product: productBid, onEdit, onDelete }) => {
       }}
     >
       <Box>
-        <Typography variant="body1">{productBid.product_name}</Typography>
+        <Typography variant="body1">{productBid.product.product_name}</Typography>
         <Typography variant="body2" color="textSecondary">
-          {productBid.description}
+          {productBid.product.description}
         </Typography>
         <Typography variant="body2" color="textSecondary">
           {productBid.price}

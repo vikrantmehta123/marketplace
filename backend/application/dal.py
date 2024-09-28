@@ -65,7 +65,7 @@ class UserDAL:
     @staticmethod
     def get_incomplete_sales_orders(user_id: int):
         try:
-            incomplete_sales_orders = db.session.query(OrderItems).filter_by(seller_id=user_id, is_completed=False).all()
+            incomplete_sales_orders = db.session.query(OrderItem).filter_by(seller_id=user_id, is_completed=False).all()
             return incomplete_sales_orders
         except Exception as e:
             raise e
@@ -292,7 +292,7 @@ class OrderDAL:
         
         try:
             for item in items:
-                order_item = OrderItems(
+                order_item = OrderItem(
                     seller_id=item['seller_id'],
                     product_id=item['product_id'],
                     price=item['price'],

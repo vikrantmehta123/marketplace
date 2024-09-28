@@ -1,12 +1,13 @@
 'use client';
 import React, { useState, useEffect } from "react";
-import { Box, Typography, List } from "@mui/material";
+import { Box, Typography, List, TextField, Tooltip, IconButton } from "@mui/material";
+import AddIcon from '@mui/icons-material/Add';
 import axios from "axios";
 
 import BidItem from "./BidItem";
 import ConfirmationDialog from "@/app/ConfirmationDialog";
 
-const BidList = ({ products }) => {
+const BidList = () => {
     const [filteredProductBids, setFilteredProductBids] = useState([]);
     const [productBids, setProductBids] = useState([]);
     const [searchTerm, setSearchTerm] = useState('');
@@ -19,9 +20,29 @@ const BidList = ({ products }) => {
     }, []);
 
     const fetchProductBids = async () => {
-        const response = await axios.get('http://127.0.0.1:5000/api/v1/product-sellers/bids');
-        setPendingOrders(response.data);
-        setFilteredPendingOrders(response.data);
+        const response = await axios.get('http://127.0.0.1:5000/api/v1/product-sellers/bids', {
+            headers: {
+                'User-Id': '3',
+                'Authorization': 'Bearer your-token-here'
+            }
+        })
+
+
+        if (response.data ) {
+            // Parse the seller object
+            const data = JSON.parse(response.data);
+
+            
+            // Parse the product_bids array
+            const productBids = data.product_bids.map(productBid => JSON.parse(productBid));
+            console.log(data.product_bids);
+            // Set productBids and filteredProductBids
+            setProductBids(productBids);
+            setFilteredProductBids(productBids);
+        } else {
+            console.error('Response data is not an object:', response.data);
+            setFilteredProductBids([]); // Set to empty array if not valid
+        }
     }
 
     const handleSearchChange = (event) => {
@@ -49,6 +70,11 @@ const BidList = ({ products }) => {
         setConfirmOpen(false);
     };
 
+    const handleCreate = () => {
+        console.log("Created");
+        setFormOpen(true);
+    }
+
     return (
         <Box sx={{ padding: 2 }}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 2 }}>
@@ -72,12 +98,13 @@ const BidList = ({ products }) => {
                 </Box>
             </Box>
             <List>
+
                 {filteredProductBids.map((productBid, idx) => (
                     <BidItem key={idx} productBid={productBid} onEdit={handleEdit} onDelete={handleDelete} />
                 ))}
 
             </List>
-            
+
             {/* TODO: Handle Form Modals Here */}
             {isConfirmOpen && (
                 <ConfirmationDialog
