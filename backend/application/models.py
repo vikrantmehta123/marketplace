@@ -116,7 +116,7 @@ class ProductSellers(db.Model, TimestampMixin):
     selling_price = Column(Float, nullable=False)
     stock = Column(Integer, nullable=False)    
 
-    seller = relationship('User', backref="products")
+    seller = relationship('User', backref="product_bids")
     product = relationship('Product', backref='sellers')
     
     def to_json(self) -> dict:
@@ -151,7 +151,7 @@ class Order(db.Model, TimestampMixin):
     order_id = Column(Integer, primary_key=True, autoincrement=True)
     buyer_id = Column(Integer, ForeignKey('user.user_id'), nullable=False)
 
-    user = relationship('User', backref='purchase_orders')
+    buyer = relationship('User', backref='purchase_orders')
     orderitems = relationship('OrderItems', backref='order', cascade='all, delete')
 
     def to_json(self) -> dict:
@@ -180,3 +180,28 @@ class OrderItems(db.Model):
 
     def to_json(self) -> dict:
         return dataclasses.asdict(self)
+    
+
+@dataclass
+class Wishlist(db.Model):
+    wishlist_id:int
+    user_id:int
+    wishlist_name:str
+
+    wishlist_id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id = Column(Integer, ForeignKey('user.user_id'), nullable=False)
+    wishlist_name = Column(String(255), nullable=False)
+
+    user = relationship('User', backref='wishlist')
+    wishlist_items = relationship('WishlistItems', backref='wishlist', cascade='all, delete')
+
+@dataclass
+class WishlistItems(db.Model, TimestampMixin):
+    wishlist_id:int
+    wishlist_itemid : int
+    product_id: int
+
+    wishlist_itemid = Column(Integer, primary_key=True, autoincrement=True)
+    product_id = Column(Integer, ForeignKey('product.product_id'), nullable=False)
+    wishlist_id = Column(Integer, ForeignKey('wishlist.wishlist_id'), nullable=False)
+

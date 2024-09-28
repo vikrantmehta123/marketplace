@@ -253,7 +253,7 @@ def delete_review(review_id):
 # endregion
 
 
-# region ProductSellers
+# region ProductSellers API
 @api.route('/product-sellers', methods=['POST'])
 def create_product_seller():
     """
@@ -305,6 +305,16 @@ def delete_product_seller(productseller_id):
         except Exception as e:
             return jsonify({'error': str(e)}), 400  # Bad request
         
+@api.route('/product-sellers/bids', methods=['GET'])
+def get_product_bids():
+    user_id = request.form.get('user_id')
+    try:
+        productbids = ProductSellerDAL.get_products_by_seller(seller_id=user_id)
+        product_bids = [prdbid.to_json() for prdbid in productbids]
+        return jsonify(product_bids), 200
+    except Exception as e:
+        return jsonify({'message':str(e)}), 500
+
 @api.route('/products/<int:product_id>/sellers', methods=['GET'])
 def get_sellers_by_product(product_id):
     try:
@@ -370,4 +380,13 @@ def delete_order(order_id):
         return jsonify({'message': str(e)}), 404  # Not found
     except Exception as e:
         return jsonify({'error': str(e)}), 400  # Bad request
+    
+@api.route('/orders/pending', methods=['GET'])
+def get_pending_orders():
+    user_id = request.form.get('user_id')
+
+    pending_orders = UserDAL.get_incomplete_sales_orders(user_id=user_id)
+    pending_orders = [pending_order.to_json() for pending_order in pending_orders]
+    return jsonify(pending_orders), 200
+    pass
 # endregion

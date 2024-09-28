@@ -64,7 +64,7 @@ class UserDAL:
     @staticmethod
     def get_incomplete_sales_orders(user_id: int):
         try:
-            incomplete_sales_orders = OrderItems.query.filter_by(seller_id=user_id, is_completed=False).all()
+            incomplete_sales_orders = db.session.query(OrderItems).filter_by(seller_id=user_id, is_completed=False).all()
             return incomplete_sales_orders
         except Exception as e:
             raise e
@@ -328,3 +328,27 @@ class OrderDAL:
             db.session.rollback()
             raise e
         return order
+    
+
+class WishlistDAL:
+    @staticmethod 
+    def create(user_id:int, wishlist_name:str)->Wishlist:
+        """Creates an empty wishlist with the given name for the user"""
+        pass
+
+    @staticmethod
+    def update(wishlist_id:int, wishlist_name:str) -> Wishlist:
+        """Lets users change name of their wishlist"""
+        pass
+
+    @staticmethod 
+    def delete(wishlist_id:int):
+        """Lets users delete their wishlist and associated items"""
+
+    @staticmethod
+    def add_item_to_wishlist(wishlist_id:int, product_id:int):
+        """lets users add products to their wishlist"""
+
+    @staticmethod
+    def delete_item_from_wishlist(wishlist_id:int, product_id:int):
+        """Lets users delete product from their wishlist"""
