@@ -4,28 +4,6 @@ import { Box, Typography, CssBaseline } from '@mui/material';
 import Link from 'next/link';
 
 const Footer = () => {
-  const [isAtBottom, setIsAtBottom] = useState(false);
-
-  useEffect(() => {
-    const handleScroll = () => {
-      const scrollableHeight = document.documentElement.scrollHeight - window.innerHeight;
-      const scrolled = window.scrollY;
-
-      // Check if scrolled to the bottom
-      if (scrollableHeight === scrolled) {
-        setIsAtBottom(true);
-      } else {
-        setIsAtBottom(false);
-      }
-    };
-
-    window.addEventListener('scroll', handleScroll);
-
-    return () => {
-      window.removeEventListener('scroll', handleScroll);
-    };
-  }, []);
-
   return (
     <Box
       component="footer"
@@ -33,7 +11,7 @@ const Footer = () => {
         width: '100%',
         backgroundColor: '#1c1c1c',
         color: '#fff',
-        position: isAtBottom ? 'static' : 'absolute',
+        position:'fixed',
         bottom: 0,
         left: 0,
         padding: '8px 0', // Reduced padding

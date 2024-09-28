@@ -119,7 +119,7 @@ class Category(db.Model):
 
     def to_json(self) -> dict:
         return {
-            'category_id' : self.category_id,
+            'category_id': self.category_id,
             'category_name': self.category_name
         }
 
@@ -228,19 +228,27 @@ class Order(db.Model):
         'user.user_id'), nullable=False)
 
     buyer = relationship('User', backref='purchase_orders', repr=False)
-    orderitems = relationship(
-        'OrderItems', backref='order', cascade='all, delete')
+    orderitems: Mapped[list['OrderItem']] = relationship(
+        'OrderItem', back_populates='order', cascade='all, delete')
 
     def __init__(self, buyer_id: int) -> None:
         super().__init__()
         self.buyer_id = buyer_id
 
-    def to_json(self) -> dict:
-        return dataclasses.asdict(self)
+    def to_json(self):
+        return {
+            'order_id': self.order_id,
+            'buyer': {
+                'user_id': self.buyer.user_id,
+                'username': self.buyer.username, 
+                'address': self.buyer.address, 
+                'contact':self.buyer.contact
+            }
+        }
 
 
 class OrderItem(db.Model):
-    __tablename__ = 'order_items'  # Specify the table name
+    __tablename__ = 'order_items'
 
     orderitems_id = mapped_column(
         Integer, primary_key=True, autoincrement=True)
@@ -254,9 +262,12 @@ class OrderItem(db.Model):
     quantity = mapped_column(Integer, nullable=False)
     is_completed = mapped_column(Boolean, default=False)
 
-    seller = relationship('User', backref='sales_orders',
-                          lazy='select', repr=False)
-    product = relationship('Product', backref='orders', repr=False)
+    seller: Mapped['User'] = relationship('User', backref='sales_orders',
+                                          lazy='select', repr=False)
+    product: Mapped['Product'] = relationship(
+        'Product', backref='orders', repr=False)
+    order: Mapped[Order] = relationship(
+        'Order', back_populates='orderitems')
 
     def __init__(self, seller_id: int, product_id: int, price: float, quantity: int, is_completed=False) -> None:
         super().__init__()
@@ -266,8 +277,22 @@ class OrderItem(db.Model):
         self.quantity = quantity
         self.is_completed = is_completed
 
-    def to_json(self) -> dict:
-        return dataclasses.asdict(self)
+    def to_json(self):
+        return {
+            'order_id': self.order_id,
+            'product': {
+                'product_id': self.product.product_id,
+                'product_name': self.product.product_name
+            },
+            'is_completed': self.is_completed,
+            'price': self.price,
+            'quantity': self.quantity,
+            'seller': {
+                'seller_id': self.seller.user_id,
+                'username': self.seller.username
+            }, 
+            'order': self.order.to_json()
+        }
 
 
 class Wishlist(db.Model):

@@ -1,43 +1,57 @@
 import React from 'react';
-import { Box, Typography, Button } from '@mui/material';
+import { Card, CardContent, CardActions, Typography, Button, Box } from '@mui/material';
 
 const BidItem = ({ productBid, onEdit, onDelete }) => {
   return (
-    <Box
+    <Card
       sx={{
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
+        marginBottom: 2, // Add some spacing between cards
         padding: 1,
-        borderBottom: '1px solid #ccc', // Add this line for the bottom border
+        boxShadow: '0 2px 5px rgba(0, 0, 0, 0.1)', // Add a subtle shadow for elevation
+        borderRadius: '8px', // Optional: Make the card corners rounded
       }}
     >
-      <Box>
-        <Typography variant="body1">{productBid.product.product_name}</Typography>
-        <Typography variant="body2" color="textSecondary">
+      {/* Card Content */}
+      <CardContent>
+        <Typography variant="h6" component="div">
+          {productBid.product.product_name}
+        </Typography>
+        <Typography variant="body2" color="textSecondary" mt={2} mb={1}>
           {productBid.product.description}
         </Typography>
         <Typography variant="body2" color="textSecondary">
-          {productBid.price}
+          Price: ${productBid.price.toFixed(2)}
         </Typography>
         <Typography variant="body2" color="textSecondary">
-          {productBid.stock}
+          Stock: {productBid.stock}
         </Typography>
-      </Box>
-      <Box>
-        <Button variant="contained" onClick={() => onEdit(productBid)}>
+      </CardContent>
+
+      {/* Card Actions */}
+      <CardActions
+        sx={{
+          display: 'flex',
+          justifyContent: 'flex-end', 
+        }}
+      >
+        <Button
+          variant="contained"
+          size="small"
+          onClick={() => onEdit(productBid)}
+        >
           Edit
         </Button>
         <Button
           variant="contained"
           color="error"
-          onClick={() => onDelete(productBid)}
+          size="small"
           sx={{ marginLeft: 1 }}
+          onClick={() => onDelete(productBid)}
         >
           Delete
         </Button>
-      </Box>
-    </Box>
+      </CardActions>
+    </Card>
   );
 };
 

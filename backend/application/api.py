@@ -311,7 +311,6 @@ def get_product_bids():
 
     try:
         productbids = ProductSellerDAL.get_products_by_seller(seller_id=user_id)
-        print(productbids)
         return jsonify(productbids), 200
     except Exception as e:
         print(e.args[0])
@@ -385,10 +384,9 @@ def delete_order(order_id):
     
 @api.route('/orders/pending', methods=['GET'])
 def get_pending_orders():
-    user_id = request.form.get('user_id')
+    user_id = request.headers.get('User-Id')
 
     pending_orders = UserDAL.get_incomplete_sales_orders(user_id=user_id)
     pending_orders = [pending_order.to_json() for pending_order in pending_orders]
     return jsonify(pending_orders), 200
-    pass
 # endregion

@@ -1,7 +1,7 @@
 import "./globals.css";
 import { AppRouterCacheProvider } from '@mui/material-nextjs/v14-appRouter';
 import NavigationBar from "./navigationbar";
-import { Box } from "@mui/material";
+import { Box, CssBaseline } from "@mui/material";
 import Footer from "./footer";
 
 export const metadata = {
@@ -13,18 +13,22 @@ import React from 'react';
 
 export default function RootLayout({ children }) {
   return (
-    <>
-      <Box lang="en" component='html'>
-        <AppRouterCacheProvider>
-          <body>
-            
-            <NavigationBar />
+
+    <Box lang="en" component='html' sx={{
+      display: 'flex',
+      flexDirection: 'column',
+      minHeight: '100%'
+    }}
+    >
+      <AppRouterCacheProvider>
+        <body>
+          <NavigationBar />
             {children}
-            <Footer/>
-          </body>
-        </AppRouterCacheProvider>
-      </Box>
-    </>
+          <Footer />
+        </body>
+      </AppRouterCacheProvider>
+    </Box>
+
 
   );
 }

@@ -27,22 +27,15 @@ const BidList = () => {
             }
         })
 
+        const data = response.data;
 
-        if (response.data ) {
-            // Parse the seller object
-            const data = JSON.parse(response.data);
+        // Parse the product_bids array
+        const productBids = data.product_bids;
 
-            
-            // Parse the product_bids array
-            const productBids = data.product_bids.map(productBid => JSON.parse(productBid));
-            console.log(data.product_bids);
-            // Set productBids and filteredProductBids
-            setProductBids(productBids);
-            setFilteredProductBids(productBids);
-        } else {
-            console.error('Response data is not an object:', response.data);
-            setFilteredProductBids([]); // Set to empty array if not valid
-        }
+        // Set productBids and filteredProductBids
+        setProductBids(productBids);
+        setFilteredProductBids(productBids);
+
     }
 
     const handleSearchChange = (event) => {
@@ -82,7 +75,7 @@ const BidList = () => {
                 <Box sx={{ display: 'flex', alignItems: 'center' }}>
                     <TextField
                         variant="outlined"
-                        placeholder="Search categories..."
+                        placeholder="Search Bids..."
                         value={searchTerm}
                         onChange={handleSearchChange}
                         size="small"
@@ -90,7 +83,7 @@ const BidList = () => {
                     />
 
                     {/* Instead of opening a modal, create a new window / redirect to page for new product */}
-                    <Tooltip title="Can't find the category? Create one">
+                    <Tooltip title="Create a bid">
                         <IconButton color="primary" onClick={handleCreate}>
                             <AddIcon />
                         </IconButton>

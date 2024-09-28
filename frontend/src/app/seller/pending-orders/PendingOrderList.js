@@ -1,5 +1,5 @@
 'use client';
-import { Box, Typography, List, ListItem } from "@mui/material";
+import { Box, Typography, List, TextField, TableBody, TableRow, Table, TableHead, TableCell } from "@mui/material";
 import axios from "axios";
 import React, { useEffect, useState } from "react";
 import PendingOrderItem from "./PendingOrderItem";
@@ -15,7 +15,13 @@ const PendingOrderList = () => {
     }, []);
 
     const fetchPendingOrders = async () => {
-        const response = await axios.get('http://127.0.0.1:5000/api/v1/orders/pending');
+        const response = await axios.get('http://127.0.0.1:5000/api/v1/orders/pending', {
+            headers: {
+                'User-Id': '3',
+                'Authorization': 'Bearer your-token-here'
+            }
+        });
+        console.log(response.data);
         setPendingOrders(response.data);
         setFilteredPendingOrders(response.data); // Initialize filtered pending orders
     }
@@ -26,10 +32,10 @@ const PendingOrderList = () => {
         // Filter pending orders based on the search term
         const filtered = pendingOrders.filter((pendingOrder) =>
             pendingOrder.product.product_name.toLowerCase().includes(value.toLowerCase()) ||
-            pendingOrder.buyer.username.toLowerCase().includes(value.toLowerCase()) ||
-            pendingOrder.buyer.address.toLowerCase().includes(value.toLowerCase())
+            pendingOrder.order.buyer.username.toLowerCase().includes(value.toLowerCase()) ||
+            pendingOrder.order.buyer.address.toLowerCase().includes(value.toLowerCase())
         );
-        setFilteredCategories(filtered);
+        setFilteredPendingOrders(filtered);
     };
 
     const handleMarkAsCompleted = async (pendingOrder) => {
@@ -38,7 +44,7 @@ const PendingOrderList = () => {
             // TODO: Make a PUT request to update the status of the selected order
             const response = await axios.put("http://127.0.0.1:5000/api/v1/orders/pending");
         }
-        catch(err){
+        catch (err) {
             console.log(err);
         }
 
@@ -61,16 +67,47 @@ const PendingOrderList = () => {
                 </Box>
             </Box>
 
-            {/* TODO: Insert the form pop-up for confirmation */}
-            <List>
-                {filteredPendingOrders.map((pendingOrder, idx) => (
-                    <PendingOrderItem
-                        key={idx}
-                        pendingOrder={pendingOrder}
-                        onMarkAsCompleted={handleMarkAsCompleted}
-                    />
-                ))}
-            </List>
+            <Table sx={{ borderCollapse: 'collapse' }}>
+                <TableHead>
+                    <TableRow>
+                        <TableCell>
+                            <Typography variant="body1" sx={{ fontWeight: 'bold' }}>
+                                Product Name
+                            </Typography>
+                        </TableCell>
+                        <TableCell>
+                            <Typography variant="body1" sx={{ fontWeight: 'bold' }}>
+                                Price
+                            </Typography>
+                        </TableCell>
+                        <TableCell>
+                            <Typography variant="body1" sx={{ fontWeight: 'bold' }}>
+                                Quantity
+                            </Typography>
+                        </TableCell>
+                        <TableCell>
+                            <Typography variant="body1" sx={{ fontWeight: 'bold' }}>
+                                Buyer Address
+                            </Typography>
+                        </TableCell>
+                        <TableCell>
+                            <Typography variant="body1" sx={{ fontWeight: 'bold' }}>
+                                Buyer Username
+                            </Typography>
+                        </TableCell>
+                        <TableCell>
+                            <Typography variant="body1" sx={{ fontWeight: 'bold' }}>
+                                Action
+                            </Typography>
+                        </TableCell>
+                    </TableRow>
+                </TableHead>
+                <TableBody>
+                    {filteredPendingOrders.map((pendingOrder, idx) => (
+                        <PendingOrderItem key={idx} pendingOrder={pendingOrder} onMarkAsCompleted={handleMarkAsCompleted} />
+                    ))}
+                </TableBody>
+            </Table>
         </Box>
     )
 }

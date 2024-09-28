@@ -9,3 +9,5 @@ const PendingOrdersPage = () => {
         </Box>
     )
 }
+
+export default PendingOrdersPage;

@@ -4,10 +4,12 @@ from application.models import *
 from application.dal import *
 import random
 
+
 def setup_initial_data():
     roles = {1: 'admin', 2: 'seller', 3: 'buyer'}
     for role_id, role_name in roles.items():
-        existing_role = db.session.query(Role).filter_by(role_id=role_id).first()
+        existing_role = db.session.query(
+            Role).filter_by(role_id=role_id).first()
         if existing_role is None:
             new_role = Role(role_id=role_id, role_name=role_name)
             db.session.add(new_role)
@@ -86,28 +88,47 @@ def initialize_categories_and_products():
 
     for i, cat in enumerate(categories):
         category = CategoryDAL.create(name=cat["category_name"]
-        )
-        product = ProductDAL.create(category_id=category.category_id, created_by=1, product_name=products[i]['product_name'], description=products[i]['description'])
+                                      )
+        product = ProductDAL.create(category_id=category.category_id, created_by=1,
+                                    product_name=products[i]['product_name'], description=products[i]['description'])
     print("Categories and products initialized.")
+
 
 def initialize_dummy_users():
     try:
         buyer = UserDAL.create(username='buyer', email='buyer@example.com',
-                                password='buyerpassword', contact="1234567890", address="10 Buyer Street", roles=[3])
+                               password='buyerpassword', contact="1234567890", address="10 Buyer Street", roles=[3])
         seller = UserDAL.create(username='seller', email='seller@example.com',
                                 password='sellerpassword', contact="1234567890", address="10 Seller Street", roles=[2])
-        print("Buyer and seller created successfully with IDs: ", buyer.user_id, seller.user_id, " respectively")
+        print("Buyer and seller created successfully with IDs: ",
+              buyer.user_id, seller.user_id, " respectively")
     except Exception as e:
         print("Could not create buyers and sellers due to: ", e.args[0])
     return buyer, seller
+
 
 def initialize_dummy_pending_bids(seller_id):
     products = ProductDAL.get_all_products()
 
     for i in range(3):
         product = random.choice(products)
-        ProductSellerDAL.create(product.product_id, seller_id, random.uniform(1, 100), random.randint(1, 100))
+        ProductSellerDAL.create(product.product_id, seller_id, random.uniform(
+            1, 100), random.randint(1, 100))
     print("Product bids created successfully")
+
+
+def initialize_orders(buyer_id: int, seller_id: int):
+    seller = ProductSellerDAL.get_products_by_seller(seller_id=seller_id)
+    items = []
+    for i in range(3):
+        product_bid = random.choice(seller['product_bids'])
+        quantity = random.randint(1, 10)
+        item = {'seller_id': seller_id, 'product_id': product_bid['product']['product_id'],
+                'price': product_bid['price'], 'quantity': quantity}
+        items.append(item)
+    OrderDAL.create(buyer_id=buyer_id, items=items)
+    print("Order created successfully")
+
 
 def initialize_database(app: Flask):
     with app.app_context():
@@ -116,3 +137,4 @@ def initialize_database(app: Flask):
         initialize_categories_and_products()
         buyer, seller = initialize_dummy_users()
         initialize_dummy_pending_bids(seller_id=seller.user_id)
+        initialize_orders(buyer_id=buyer.user_id, seller_id=seller.user_id)
