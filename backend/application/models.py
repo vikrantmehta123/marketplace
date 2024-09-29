@@ -138,8 +138,13 @@ class Product(db.Model):
 
     category: Mapped['Category'] = relationship(
         'Category', back_populates='products')
+    
+    # TODO: Test the below line once. I think it should be ProductSellers in Mapped
     sellers: Mapped[list['Product']] = relationship(
         'ProductSellers', back_populates='product')
+
+    images: Mapped[list['ProductImages']] = relationship(
+        'ProductImages', back_populates='product')
 
     def __init__(self, product_name: str, description: str, created_by: int, category_id: int) -> None:
         super().__init__()
@@ -150,6 +155,14 @@ class Product(db.Model):
 
     def to_json(self) -> dict:
         """Convert the Product instance to a JSON-compatible dict."""
+        images = [ ]
+        for img in self.images:
+            res = {
+                'imagerecord_id' : img.imagerecord_id,
+                'image_url' : img.image_url, 
+                'image_alt_text' : img.image_alt_text 
+            }
+            images.append(res)
         return {
             'product_id': self.product_id,
             'product_name': self.product_name,
@@ -157,13 +170,26 @@ class Product(db.Model):
             'category': {
                 'category_id': self.category.category_id,
                 'category_name': self.category.category_name
-            }
+            }, 
+            "images" : images
         }
 
     def __repr__(self) -> str:
         """Return a JSON string representation of the object."""
         return json.dumps(self.to_json())
 
+
+class ProductImages(db.Model):
+    imagerecord_id: Mapped[int] = mapped_column(
+        primary_key=True, autoincrement=True)
+
+    image_url: Mapped[str] = mapped_column(nullable=False)
+    image_alt_text: Mapped[str] = mapped_column(nullable=False)
+    product_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey('product.product_id', ondelete='CASCADE'))
+
+    product: Mapped['Product'] = relationship(
+        'Product', back_populates='images')
 
 class ProductSellers(db.Model):
     productseller_id = mapped_column(
@@ -205,9 +231,15 @@ class Review(db.Model):
     product_id = mapped_column(Integer, ForeignKey('product.product_id'))
     rating = mapped_column(Float, nullable=False)
     comment = mapped_column(Text, nullable=True)
+    upvotes: Mapped[int] = mapped_column()
+    downvotes: Mapped[int] = mapped_column()
 
     user = relationship('User', backref='reviews', repr=False)
     product = relationship('Product', backref='reviews', repr=False)
+
+    @property
+    def score(self):
+        return self.upvotes - self.downvotes
 
     def __init__(self, user_id: int, product_id: int, rating: float, comment: str) -> None:
         super().__init__()
@@ -215,16 +247,21 @@ class Review(db.Model):
         self.product_id = product_id
         self.rating = rating
         self.comment = comment
+        self.downvotes = 0
+        self.upvotes = 0
 
     def to_json(self) -> dict:
         return {
-            'review_id' : self.review_id, 
-            'product_id' : self.product_id, 
-            'rating' : self.rating, 
-            'comment' : self.comment, 
+            'review_id': self.review_id,
+            'product_id': self.product_id,
+            'rating': self.rating,
+            'comment': self.comment,
             'user': {
-                'username' : self.user.username
-            }
+                'username': self.user.username
+            },
+            'upvotes': self.upvotes,
+            'downvotes': self.downvotes, 
+            'score' : self.score
         }
 
 
@@ -248,9 +285,9 @@ class Order(db.Model):
             'order_id': self.order_id,
             'buyer': {
                 'user_id': self.buyer.user_id,
-                'username': self.buyer.username, 
-                'address': self.buyer.address, 
-                'contact':self.buyer.contact
+                'username': self.buyer.username,
+                'address': self.buyer.address,
+                'contact': self.buyer.contact
             }
         }
 
@@ -298,7 +335,7 @@ class OrderItem(db.Model):
             'seller': {
                 'seller_id': self.seller.user_id,
                 'username': self.seller.username
-            }, 
+            },
             'order': self.order.to_json()
         }
 

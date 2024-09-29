@@ -124,6 +124,7 @@ class CategoryDAL:
 
 # region CRUD operations for Reviews
 class ReviewDAL:
+    @staticmethod
     def create(user_id:int, product_id:int, rating:float, comment:str=None) -> Review:
         review = Review(user_id=user_id, product_id=product_id, rating=rating, comment=comment)
         try:
@@ -134,10 +135,12 @@ class ReviewDAL:
             raise e
         return review
     
+    @staticmethod
     def get_review_by_id(review_id:int) -> Review:
         review = db.session.get(Review, review_id)
         return review
 
+    @staticmethod
     def update(review_id:int, **kwargs) -> Review:
         review = ReviewDAL.get_review_by_id(review_id)
         if not review: 
@@ -155,6 +158,7 @@ class ReviewDAL:
             raise e
         return review 
 
+    @staticmethod
     def delete(review_id:int) -> Review:
         review = ReviewDAL.get_review_by_id(review_id)
         if not review:
@@ -166,9 +170,32 @@ class ReviewDAL:
             raise e
         return review
     
+    @staticmethod
     def get_reviews_by_product(product_id:int) -> list[Review]:
         reviews = db.session.query(Review).filter_by(product_id=product_id).all()
-        print([rev.to_json() for rev in reviews])
+        return reviews
+
+    @staticmethod
+    def increment_upvote(review_id:int):
+        review = ReviewDAL.get_review_by_id(review_id)
+        review.upvotes += 1
+        db.session.commit()
+    
+    @staticmethod
+    def increment_downvotes(review_id:int):
+        review = ReviewDAL.get_review_by_id(review_id)
+        review.downvotes += 1
+        db.session.commit()
+
+    @staticmethod
+    def fetch_top_reviews(product_id, limit=100):
+        reviews = (
+            db.session.query(Review)
+            .filter_by(product_id = product_id)
+            .order_by((Review.upvotes - Review.downvotes).desc())  # Order by score
+            .limit(limit)
+            .all()
+        )
         return reviews
 # endregion
 
