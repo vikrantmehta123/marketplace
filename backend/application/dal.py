@@ -2,7 +2,7 @@ from sqlalchemy.exc import IntegrityError
 from .models import *
 import bcrypt
 from .exceptions import *
-import json
+from sqlalchemy import desc
 
 SALT ="some-string"
 
@@ -168,7 +168,7 @@ class ReviewDAL:
     
     def get_reviews_by_product(product_id:int) -> list[Review]:
         reviews = db.session.query(Review).filter_by(product_id=product_id).all()
-        print(reviews[0])
+        print([rev.to_json() for rev in reviews])
         return reviews
 # endregion
 
@@ -267,7 +267,21 @@ class ProductSellerDAL:
     
     @staticmethod
     def get_sellers_by_product(product_id: int):
-        return db.session.query(ProductSellers).filter_by(product_id=product_id).all()
+        results = db.session.query(ProductSellers).filter_by(product_id=product_id).order_by(desc(ProductSellers.selling_price)).all()
+        output = [ ]
+        for res in results:
+            res_json = { 
+                'productseller_id': res.productseller_id,
+                'stock' : res.stock, 
+                'price' : res.selling_price, 
+                'seller': {
+                    'username': res.seller.username, 
+                    'contact':res.seller.contact
+                }
+            }
+            output.append(res_json)
+        
+        return output
 
     @staticmethod
     def get_products_by_seller(seller_id: int) -> list[ProductSellers]:
@@ -341,6 +355,12 @@ class OrderDAL:
             db.session.rollback()
             raise e
         return order
+    
+    @staticmethod
+    def mark_order_as_completed(orderitem_id:int):
+        orderitem = db.session.get(OrderItem, orderitem_id)
+        orderitem.is_completed = True
+        db.session.commit()
     
 
 class WishlistDAL:

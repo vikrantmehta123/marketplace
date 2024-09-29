@@ -216,13 +216,14 @@ def get_review(review_id):
     return jsonify({'message': 'Review not found'}), 404  # Not found
 
 @api.route('/products/<int:product_id>/reviews', methods=['GET'])
-@cache.memoize(timeout=86400)  # Cache for 1 day
+#@cache.memoize(timeout=86400)  # Cache for 1 day
 def get_reviews_by_product(product_id):
     try:
         reviews = ReviewDAL.get_reviews_by_product(product_id)
         reviews_list = [review.to_json() for review in reviews]
         return jsonify(reviews_list), 200  # OK
     except Exception as e:
+        print("Exception: ", e.args[0])
         return jsonify({'error': str(e)}), 400
     
 @api.route('/reviews/<int:review_id>', methods=['PUT'])
@@ -309,6 +310,7 @@ def get_product_bids():
 
     try:
         productbids = ProductSellerDAL.get_products_by_seller(seller_id=user_id)
+        productbids = [prdbid.to_json() for prdbid in productbids]
         return jsonify(productbids), 200
     except Exception as e:
         print(e.args[0])
@@ -318,8 +320,8 @@ def get_product_bids():
 def get_sellers_by_product(product_id):
     try:
         sellers = ProductSellerDAL.get_sellers_by_product(product_id)
-        sellers_list = [seller.to_json() for seller in sellers]
-        return jsonify(sellers_list), 200  # OK
+        print(sellers)
+        return jsonify(sellers), 200  # OK
     except Exception as e:
         return jsonify({'error': str(e)}), 400  # Bad request
 # endregion

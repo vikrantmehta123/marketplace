@@ -217,7 +217,15 @@ class Review(db.Model):
         self.comment = comment
 
     def to_json(self) -> dict:
-        return dataclasses.asdict(self)
+        return {
+            'review_id' : self.review_id, 
+            'product_id' : self.product_id, 
+            'rating' : self.rating, 
+            'comment' : self.comment, 
+            'user': {
+                'username' : self.user.username
+            }
+        }
 
 
 class Order(db.Model):

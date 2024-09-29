@@ -96,45 +96,92 @@ def initialize_categories_and_products():
 
 def initialize_dummy_users():
     try:
-        buyer = UserDAL.create(username='buyer', email='buyer@example.com',
-                               password='buyerpassword', contact="1234567890", address="10 Buyer Street", roles=[3])
-        seller = UserDAL.create(username='seller', email='seller@example.com',
-                                password='sellerpassword', contact="1234567890", address="10 Seller Street", roles=[2])
-        print("Buyer and seller created successfully with IDs: ",
-              buyer.user_id, seller.user_id, " respectively")
+        buyer1 = UserDAL.create(username='buyer1', email='buyer1@example.com',
+                                password='buyer1password', contact="1234567890", address="10 buyer1 Street", roles=[3])
+
+        buyer2 = UserDAL.create(username='buyer2', email='buyer2@example.com',
+                                password='buyer2password', contact="1234509876", address="10 buyer2 Street", roles=[3])
+
+        seller1 = UserDAL.create(username='seller1', email='seller1@example.com',
+                                 password='seller1password', contact="9876543210", address="10 seller1 Street", roles=[2])
+
+        seller2 = UserDAL.create(username='seller2', email='seller2@example.com',
+                                 password='seller2password', contact="9876123450", address="10 seller2 Street", roles=[2])
+        buyers = [buyer1, buyer2]
+        sellers = [seller1, seller2]
+        print("buyer and seller created successfully with IDs: ",
+              buyer1.user_id, seller1.user_id, " respectively")
     except Exception as e:
         print("Could not create buyers and sellers due to: ", e.args[0])
-    return buyer, seller
+    return (buyers, sellers)
 
 
-def initialize_dummy_pending_bids(seller_id):
+def initialize_dummy_pending_bids(sellers: list[User]):
     products = ProductDAL.get_all_products()
 
     for i in range(3):
         product = random.choice(products)
+        seller = random.choice(sellers)
+        seller_id = seller.user_id
         ProductSellerDAL.create(product.product_id, seller_id, random.uniform(
             1, 100), random.randint(1, 100))
     print("Product bids created successfully")
 
 
-def initialize_orders(buyer_id: int, seller_id: int):
-    seller = ProductSellerDAL.get_products_by_seller(seller_id=seller_id)
-    items = []
-    for i in range(3):
-        product_bid = random.choice(seller['product_bids'])
-        quantity = random.randint(1, 10)
-        item = {'seller_id': seller_id, 'product_id': product_bid['product']['product_id'],
-                'price': product_bid['price'], 'quantity': quantity}
-        items.append(item)
-    OrderDAL.create(buyer_id=buyer_id, items=items)
+def initialize_orders(buyers: list[User], sellers: list[User]):
+    orders = []
+    for j in range(2):
+        items = []
+        buyer = random.choice(buyers)
+        buyer_id = buyer.user_id
+        for i in range(3):
+            seller = random.choice(sellers)
+            while len(seller.product_bids) == 0:
+                seller = random.choice(sellers)
+            seller_id = seller.user_id
+            product_bid = random.choice(seller.product_bids)
+            product_bid = product_bid.to_json()
+            quantity = random.randint(1, 10)
+            item = {'seller_id': seller_id, 'product_id': product_bid['product']['product_id'],
+                    'price': product_bid['price'], 'quantity': quantity}
+            items.append(item)
+        order = OrderDAL.create(buyer_id=buyer_id, items=items)
+        orders.append(order)
     print("Order created successfully")
+    return orders
 
+
+def initialize_reviews(orders: list[Order]):
+    reviews = []
+    comments = [
+        "A poor product. Doesn't work as it is supposed to. Don't buy",
+        "A below average product. Can work but causes lot of hassle.", 
+        "Average purchase. Better alternatives present in the market", 
+        "Good product. Does what it's supposed and it's so easy to use.", 
+        "What a fantastic product"
+    ]
+    for i in range(3):
+        order = random.choice(orders)
+        product = random.choice(order.orderitems)
+        rating = random.choice([i * 0.5 for i in range(2, 11)])
+        review = {
+            'user_id': order.buyer_id,
+            'product_id': product.product_id,
+            'rating': rating,
+            'comment':  comments[int(rating) - 1]
+        }
+        review = ReviewDAL.create(review['user_id'], review['product_id'], review['rating'], review['comment'])
+        reviews.append(review)
+        OrderDAL.mark_order_as_completed(product.orderitems_id)
+    print("Reviews created successfully. ", [rev.to_json() for rev in reviews])
+    return reviews
 
 def initialize_database(app: Flask):
     with app.app_context():
         db.create_all()  # Create tables
         setup_initial_data()
         initialize_categories_and_products()
-        buyer, seller = initialize_dummy_users()
-        initialize_dummy_pending_bids(seller_id=seller.user_id)
-        initialize_orders(buyer_id=buyer.user_id, seller_id=seller.user_id)
+        buyers, sellers = initialize_dummy_users()
+        initialize_dummy_pending_bids(sellers=sellers)
+        orders = initialize_orders(buyers=buyers, sellers=sellers)
+        reviews = initialize_reviews(orders=orders)

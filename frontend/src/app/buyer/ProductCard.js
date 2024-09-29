@@ -23,7 +23,7 @@ export default function ProductCard({product}) {
         </Typography>
       </CardContent>
       <CardActions>
-        <Button size="small">View Details</Button>
+        <Button size="small" onClick={() => window.open(`/buyer/product-details?productId=${product.product_id}`, '_blank')}>View Details</Button>
       </CardActions>
     </Card>
   );
